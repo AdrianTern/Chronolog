@@ -6,7 +6,9 @@ import AddTaskInput from "@/components/AddTaskInput";
 import TaskList from "@/components/TaskList";
 import RunningTaskCard from "@/components/RunningTaskCard";
 import Link from "next/link";
-import { BarChart2, Clock } from "lucide-react";
+import { BarChart2 } from "lucide-react";
+
+import Image from "next/image";
 
 export default function Dashboard() {
   const { tasks, addTask, deleteTask, renameTask, refreshTasks } = useTasks();
@@ -26,8 +28,8 @@ export default function Dashboard() {
     <main className="py-16 animate-slide-up">
       <header className="flex items-center justify-between mb-24">
         <div className="flex items-center gap-6">
-          <div className="w-14 h-14 bg-white rounded-xl shadow-sm border border-notion-border flex items-center justify-center">
-            <Clock size={28} className="text-notion-text" strokeWidth={1.5} />
+          <div className="w-14 h-14 bg-white rounded-xl shadow-sm border border-notion-border flex items-center justify-center overflow-hidden p-3 text-notion-text">
+            <Image src="/logo.png" alt="Chronolog Logo" width={32} height={32} priority />
           </div>
           <div>
             <h1 className="leading-none mb-1">Chronolog</h1>
