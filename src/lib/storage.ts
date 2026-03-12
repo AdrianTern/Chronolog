@@ -53,3 +53,24 @@ export const deleteTask = (taskId: string) => {
     const tasks = loadTasks();
     saveTasks(tasks.filter((t) => t.id !== taskId));
 };
+
+export const getPendingAutoPause = (): { taskId: string; sessionId: string; pauseAt: number } | null => {
+    if (!isBrowser) return null;
+    const data = localStorage.getItem("chronolog-pending-autopause");
+    if (!data) return null;
+    try {
+        return JSON.parse(data);
+    } catch {
+        return null;
+    }
+};
+
+export const setPendingAutoPause = (data: { taskId: string; sessionId: string; pauseAt: number }) => {
+    if (!isBrowser) return;
+    localStorage.setItem("chronolog-pending-autopause", JSON.stringify(data));
+};
+
+export const clearPendingAutoPause = () => {
+    if (!isBrowser) return;
+    localStorage.removeItem("chronolog-pending-autopause");
+};

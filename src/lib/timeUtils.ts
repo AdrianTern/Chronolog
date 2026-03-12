@@ -42,12 +42,16 @@ export const calculateDailyTotal = (task: Task, date: Date = new Date()): number
 export const calculateWeeklyTotal = (task: Task, date: Date = new Date()): number => {
     const day = date.getDay();
     const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Monday start
-    const startOfWeek = new Date(date.setDate(diff));
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(diff);
     startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
 
     return task.sessions.reduce((total, session) => {
         const start = Math.max(session.startTime, startOfWeek.getTime());
-        const end = session.endTime || Date.now();
+        const end = Math.min(session.endTime || Date.now(), endOfWeek.getTime());
         return total + (end > start ? end - start : 0);
     }, 0);
 };

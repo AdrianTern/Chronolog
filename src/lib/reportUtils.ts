@@ -6,7 +6,7 @@ import {
     isSameDay,
     format
 } from "date-fns";
-import { calculateSessionDuration } from "./timeUtils";
+import { calculateSessionDuration, calculateDailyTotal } from "./timeUtils";
 
 export type DayReport = {
     date: Date;
@@ -33,26 +33,12 @@ export const getWeekDays = (date: Date = new Date()) => {
 export const generateWeeklyReport = (tasks: Task[], weekDate: Date = new Date()): WeeklyTaskReport[] => {
     const days = getWeekDays(weekDate);
 
-    // Pre-calculate start and end timestamps for each day to avoid creating Date objects in the inner loop
-    const dayBoundaries = days.map(day => {
-        const start = new Date(day);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(day);
-        end.setHours(23, 59, 59, 999);
-        return { start: start.getTime(), end: end.getTime() };
-    });
 
     return tasks.map(task => {
-        const taskDays: DayReport[] = days.map((day, idx) => {
-            const boundary = dayBoundaries[idx];
-            
-            // Filter sessions that fall within the pre-calculated day boundaries.
-            // This is significantly faster than using date-fns isSameDay on every session.
-            const daySessions = task.sessions.filter(s =>
-                s.startTime >= boundary.start && s.startTime <= boundary.end
-            );
-
-            const totalMs = daySessions.reduce((acc, s) => acc + calculateSessionDuration(s), 0);
+        const taskDays: DayReport[] = days.map((day) => {
+            // Use the centralized daily total utility to ensure perfect consistency with task cards.
+            // This correctly handles midnight rollovers and active sessions.
+            const totalMs = calculateDailyTotal(task, day);
 
             return {
                 date: day,

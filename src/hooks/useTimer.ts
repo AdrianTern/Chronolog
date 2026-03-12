@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Task, Session } from "@/types/task";
 import * as storage from "@/lib/storage";
+import * as notifications from "@/lib/notifications";
 
 /**
  * Custom hook to manage the active timer state.
@@ -14,6 +15,26 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
 
     // Sync with storage on mount and when tasks change
     useEffect(() => {
+        // Handle retroactive auto-pause before initializing state
+        const pendingPause = storage.getPendingAutoPause();
+        if (pendingPause) {
+            const now = Date.now();
+            if (now > pendingPause.pauseAt) {
+                // Retroactively close the session at the 15m mark
+                const allTasks = storage.loadTasks();
+                const tIdx = allTasks.findIndex(t => t.id === pendingPause.taskId);
+                if (tIdx !== -1) {
+                    const sIdx = allTasks[tIdx].sessions.findIndex(s => s.id === pendingPause.sessionId);
+                    if (sIdx !== -1 && allTasks[tIdx].sessions[sIdx].endTime === null) {
+                        allTasks[tIdx].sessions[sIdx].endTime = pendingPause.pauseAt;
+                        storage.saveTasks(allTasks);
+                        refreshTasks();
+                    }
+                }
+            }
+            storage.clearPendingAutoPause();
+        }
+
         const runningTask = tasks.find((t) =>
             t.sessions.some((s) => s.endTime === null)
         );
@@ -26,7 +47,7 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
             setActiveSessionId(null);
             setElapsed(0);
         }
-    }, [tasks]);
+    }, [tasks, refreshTasks]);
 
     // Tick every second
     useEffect(() => {
@@ -84,6 +105,32 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
+    }, [activeTaskId, activeSessionId, tasks]);
+
+    // Handle tab close / refresh: Alert user and set auto-pause deadline
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            if (activeTaskId && activeSessionId) {
+                const activeTask = tasks.find(t => t.id === activeTaskId);
+                
+                // 1. Send immediate notification
+                notifications.sendNotification("Chronolog: Ongoing Activity", {
+                    body: `Task '${activeTask?.name || "unnamed"}' is still running. It will auto-pause in 15 minutes if you don't return.`,
+                    tag: "active-task-alert",
+                    requireInteraction: true,
+                });
+
+                // 2. Set the 15-minute deadline in storage
+                storage.setPendingAutoPause({
+                    taskId: activeTaskId,
+                    sessionId: activeSessionId,
+                    pauseAt: Date.now() + 15 * 60 * 1000 // 15 minutes from now
+                });
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
     }, [activeTaskId, activeSessionId, tasks]);
 
     const stopTimer = useCallback(() => {

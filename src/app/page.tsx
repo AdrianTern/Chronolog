@@ -6,7 +6,9 @@ import AddTaskInput from "@/components/AddTaskInput";
 import TaskList from "@/components/TaskList";
 import RunningTaskCard from "@/components/RunningTaskCard";
 import Link from "next/link";
-import { BarChart2 } from "lucide-react";
+import { BarChart2, Bell, BellOff } from "lucide-react";
+import { useEffect, useState } from "react";
+import * as notifications from "@/lib/notifications";
 
 import Image from "next/image";
 
@@ -17,12 +19,57 @@ export default function Dashboard() {
     refreshTasks
   );
 
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
+  const [isNotifEnabled, setIsNotifEnabled] = useState(true);
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      const permission = notifications.getNotificationPermission();
+      setNotifPermission(permission);
+      setIsNotifEnabled(notifications.areNotificationsEnabled());
+
+      // Request permission automatically on first access
+      if (permission === "default") {
+        const result = await notifications.requestNotificationPermission();
+        setNotifPermission(result);
+        if (result === "granted") {
+          notifications.setNotificationsEnabled(true);
+          setIsNotifEnabled(true);
+        } else {
+          notifications.setNotificationsEnabled(false);
+          setIsNotifEnabled(false);
+        }
+      }
+    };
+
+    initNotifications();
+  }, []);
+
+  const handleToggleNotifications = async () => {
+    if (isNotifEnabled) {
+      // Disable case: Silence and update storage
+      notifications.setNotificationsEnabled(false);
+      setIsNotifEnabled(false);
+    } else {
+      // Enable case: Trigger browser prompt and update storage if granted
+      const result = await notifications.requestNotificationPermission();
+      setNotifPermission(result);
+      
+      if (result === "granted") {
+        notifications.setNotificationsEnabled(true);
+        setIsNotifEnabled(true);
+      }
+    }
+  };
+
   const handleAddTask = (name: string) => {
     const newTask = addTask(name);
     if (newTask) {
       startTimer(newTask.id);
     }
   };
+
+  const showNotificationsActive = notifPermission === "granted" && isNotifEnabled;
 
   return (
     <main className="py-16 animate-slide-up">
@@ -37,13 +84,27 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Link
-          href="/reports"
-          className="btn-secondary"
-        >
-          <BarChart2 size={18} className="text-notion-text" />
-          <span>Insights</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleToggleNotifications}
+            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-notion-hover transition-colors text-notion-secondary-text"
+            title={showNotificationsActive ? "Notifications Enabled" : "Notifications Disabled"}
+          >
+            {showNotificationsActive ? (
+              <Bell size={20} className="text-notion-text" />
+            ) : (
+              <BellOff size={20} />
+            )}
+          </button>
+
+          <Link
+            href="/reports"
+            className="btn-secondary"
+          >
+            <BarChart2 size={18} className="text-notion-text" />
+            <span>Insights</span>
+          </Link>
+        </div>
       </header>
 
       <div className="space-y-24">
