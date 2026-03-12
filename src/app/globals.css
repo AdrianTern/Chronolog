@@ -1,252 +1,328 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
-  --color-notion-bg: #ffffff;
-  --color-notion-sidebar: #f7f7f5;
-  --color-notion-border: rgba(55, 53, 47, 0.08);
-  --color-notion-text: #37352f;
-  --color-notion-text-light: #787774;
-  --color-notion-hover: #f1f1ef;
-  --color-notion-primary: #000000;
+  --font-sans: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --color-notion-bg: #f4f4f2;
+  --color-notion-sidebar: rgba(255, 255, 255, 0.65);
+  --color-notion-border: rgba(55, 53, 47, 0.09);
+  --color-notion-text: #2d2b26;
+  --color-notion-text-light: #888580;
+  --color-notion-hover: rgba(255, 255, 255, 0.85);
+  --color-notion-primary: #1a1a1a;
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #37352f;
-  --notion-border: #e9e9e7;
-  --notion-hover: #f1f1ef;
-  --notion-secondary-text: #787774;
+  --background: #f0efe9;
+  --foreground: #2d2b26;
+  --notion-border: rgba(55, 53, 47, 0.09);
+  --notion-hover: rgba(255, 255, 255, 0.85);
+  --notion-secondary-text: #888580;
+  --glass-bg: rgba(255, 255, 255, 0.68);
+  --glass-bg-strong: rgba(255, 255, 255, 0.82);
+  --glass-border-top: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --glass-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
 }
+
+/* Google Fonts Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 body {
   color: var(--foreground);
   background: var(--background);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% -10%, rgba(210, 200, 255, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 110%, rgba(255, 215, 140, 0.12) 0%, transparent 60%);
   min-height: 100vh;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.015em;
 }
 
-.bg-mesh {
-  display: none;
+/* Ambient orbs behind content */
+.bg-orb-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.bg-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.45;
+}
+
+.bg-orb-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.25), transparent 70%);
+  top: -100px;
+  left: -100px;
+  animation: orbDrift1 18s ease-in-out infinite alternate;
+}
+
+.bg-orb-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.15), transparent 70%);
+  bottom: -150px;
+  right: -100px;
+  animation: orbDrift2 22s ease-in-out infinite alternate;
+}
+
+.bg-orb-3 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(134, 239, 172, 0.12), transparent 70%);
+  top: 40%;
+  left: 50%;
+  animation: orbDrift3 28s ease-in-out infinite alternate;
+}
+
+@keyframes orbDrift1 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(60px, 80px) scale(1.1); }
+}
+@keyframes orbDrift2 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(-50px, -60px) scale(1.08); }
+}
+@keyframes orbDrift3 {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to   { transform: translate(calc(-50% + 40px), calc(-50% - 40px)) scale(1.05); }
 }
 
 @layer utilities {
-  .glass {
-    border: 1px solid var(--notion-border);
-    background: var(--background);
-    border-radius: 0.5rem;
-  }
 
-  .glass-surface {
-    background: #f7f7f5;
-  }
-
-  /* Monochrome Card Style */
-  .card-premium {
-    background: #ffffff;
-    border: 1px solid var(--notion-border);
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    transition: background 0.2s ease;
-  }
-
-  .card-premium:hover {
-    background: var(--notion-hover);
-  }
-
+  /* ---- LIQUID GLASS CARD ---- */
   .glass-card {
-    background: #ffffff;
-    border: 1px solid var(--notion-border);
-    border-radius: 0.5rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 0.875rem;
+    border: 1px solid var(--glass-border);
+    border-top-color: var(--glass-border-top);
+    box-shadow: var(--glass-shadow);
     padding: 1.25rem 1.5rem;
-    transition: background 0.2s ease;
+    transition: box-shadow 0.25s ease, background 0.25s ease, transform 0.2s ease;
   }
 
   .glass-card:hover {
-    background: var(--notion-hover);
+    background: var(--glass-bg-strong);
+    box-shadow: var(--glass-shadow-lg);
+    transform: translateY(-1px);
   }
 
+  /* ---- HERO CARD (active timer) ---- */
+  .card-premium {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 1.25rem;
+    border: 1px solid var(--glass-border);
+    border-top-color: var(--glass-border-top);
+    box-shadow: var(--glass-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    padding: 2rem 2.5rem;
+    transition: box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle sheen sweep on hero card */
+  .card-premium::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(130deg, rgba(255,255,255,0.18) 0%, transparent 50%);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .card-premium:hover {
+    box-shadow: var(--glass-shadow-lg), 0 20px 60px rgba(0,0,0,0.09), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  /* ---- GLASS SURFACE (sidebar-like) ---- */
+  .glass-surface {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* ---- GLASS INSET (input fields) ---- */
   .glass-inset {
-    background: #f7f7f5;
-    border: 1px solid var(--notion-border);
-    border-radius: 0.375rem;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-top-color: rgba(0,0,0,0.06);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.05), inset 0 1px 2px rgba(0,0,0,0.04);
+    border-radius: 0.75rem;
   }
 
-  /* Monochrome Active Buttons */
+  /* ---- BUTTONS ---- */
   .btn-primary {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: #000000;
+    padding: 0.55rem 1.1rem;
+    background: linear-gradient(145deg, #2a2a2a, #111111);
     color: #ffffff;
-    border-radius: 0.375rem;
-    font-weight: 500;
+    border-radius: 0.625rem;
+    font-weight: 600;
     font-size: 0.875rem;
-    transition: opacity 0.2s ease;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+    transition: all 0.2s ease;
   }
 
   .btn-primary:hover {
-    opacity: 0.8;
+    background: linear-gradient(145deg, #333333, #1a1a1a);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.10);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2), inset 0 2px 4px rgba(0,0,0,0.15);
   }
 
   .btn-secondary {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: transparent;
-    border: 1px solid var(--notion-border);
+    padding: 0.55rem 1.1rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     color: var(--foreground);
-    border-radius: 0.375rem;
+    border-radius: 0.625rem;
     font-weight: 500;
     font-size: 0.875rem;
-    transition: background 0.2s ease;
+    border: 1px solid var(--glass-border);
+    border-top-color: var(--glass-border-top);
+    box-shadow: var(--glass-shadow);
+    transition: all 0.2s ease;
   }
 
   .btn-secondary:hover {
-    background-color: var(--notion-hover);
+    background: var(--glass-bg-strong);
+    box-shadow: var(--glass-shadow-lg);
+    transform: translateY(-1px);
   }
 
+  /* ---- LOGO PILL ---- */
+  .logo-glass {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-top-color: var(--glass-border-top);
+    box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.9);
+    border-radius: 0.875rem;
+  }
+
+  /* ---- ICON BUTTON ---- */
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-top-color: var(--glass-border-top);
+    box-shadow: var(--glass-shadow);
+    border-radius: 0.625rem;
+    transition: all 0.2s ease;
+    color: var(--foreground);
+  }
+
+  .btn-icon:hover {
+    background: var(--glass-bg-strong);
+    box-shadow: var(--glass-shadow-lg);
+    transform: translateY(-1px);
+  }
+
+  /* ---- TYPOGRAPHY ---- */
   h1 {
-    font-size: 2.25rem;
+    font-size: 2rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
     color: var(--foreground);
   }
 
   .section-label {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.7rem;
+    font-weight: 700;
     color: var(--notion-secondary-text);
     margin-bottom: 0.75rem;
     display: block;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.09em;
   }
 
   .container-tight {
-    max-width: 840px;
+    max-width: 860px;
     margin-left: auto;
     margin-right: auto;
     padding-left: 2rem;
     padding-right: 2rem;
   }
 
+  /* ---- ANIMATIONS ---- */
   @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
   @keyframes pulseSubtle {
-
-    0%,
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    50% {
-      opacity: 0.85;
-      transform: scale(0.98);
-    }
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.8; transform: scale(0.97); }
   }
 
   @keyframes breathe {
-
-    0%,
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-
-    50% {
-      transform: scale(1.02);
-      opacity: 0.9;
-    }
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%       { transform: scale(1.025); opacity: 0.88; }
   }
 
-  .animate-fade-in {
-    animation: fadeIn 0.6s ease-out both;
+  @keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
   }
 
-  .animate-pulse-subtle {
-    animation: pulseSubtle 2s infinite ease-in-out;
-  }
+  .animate-slide-up   { animation: slideUp 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  .animate-fade-in    { animation: fadeIn 0.5s ease-out both; }
+  .animate-pulse-subtle { animation: pulseSubtle 2s infinite ease-in-out; }
+  .animate-breathe    { animation: breathe 3s infinite ease-in-out; }
 
-  .animate-breathe {
-    animation: breathe 3s infinite ease-in-out;
-  }
+  .stagger-1 { animation-delay: 0.10s; }
+  .stagger-2 { animation-delay: 0.20s; }
+  .stagger-3 { animation-delay: 0.30s; }
 
-  .stagger-1 {
-    animation-delay: 0.1s;
-  }
-
-  .stagger-2 {
-    animation-delay: 0.2s;
-  }
-
-  .stagger-3 {
-    animation-delay: 0.3s;
+  /* ---- TRANSITION UTIL ---- */
+  .transition-premium {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-/* Custom Scrollbar - Sleek Apple Style */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0,0,0,0.12);
   border-radius: 9999px;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   background-clip: content-box;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Animations */
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-slide-up {
-  animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }

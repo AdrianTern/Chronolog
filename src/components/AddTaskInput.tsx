@@ -27,18 +27,18 @@ export default function AddTaskInput({ onAdd }: AddTaskInputProps) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex gap-4 group">
+        <form onSubmit={handleSubmit} className="flex gap-3 group">
             <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="What are you working on next?"
-                className="flex-1 px-4 py-3 rounded-lg glass-inset border border-notion-border focus:border-notion-primary focus:outline-none transition-all text-sm font-medium placeholder:text-notion-text-light"
+                className="flex-1 px-4 py-3 glass-inset focus:outline-none focus:ring-2 focus:ring-black/10 transition-all text-sm font-medium placeholder:text-notion-text-light text-notion-text"
             />
             <button
                 type="submit"
                 disabled={!name.trim()}
-                className="btn-primary disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 active:scale-95 group/btn"
+                className="btn-primary disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 group/btn"
             >
                 <Plus size={20} strokeWidth={3} className="group-hover/btn:rotate-90 transition-transform duration-300" />
                 <span className="hidden sm:inline">Add Task</span>

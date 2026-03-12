@@ -26,10 +26,10 @@ export default function RunningTaskCard({
     onStop,
 }: RunningTaskCardProps) {
     return (
-        <div className="card-premium flex flex-col md:flex-row items-center justify-between gap-10 transition-all relative overflow-hidden group">
+        <div className="card-premium flex flex-col md:flex-row items-center justify-between gap-10 transition-all group">
             <div className="flex-1 text-center md:text-left relative z-10">
                 <div className="flex items-center gap-2 justify-center md:justify-start mb-4 animate-breathe">
-                    <div className="w-1.5 h-1.5 rounded-full bg-notion-primary" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-notion-primary animate-pulse" />
                     <span className="text-notion-text-light text-[10px] font-bold uppercase tracking-[0.2em]">
                         Current Activity
                     </span>
@@ -41,7 +41,11 @@ export default function RunningTaskCard({
 
             <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
                 <div className="relative">
-                    <TimerDisplay elapsed={elapsed} className="text-6xl font-bold tracking-tighter text-notion-text tabular-nums" />
+                    <TimerDisplay
+                        elapsed={elapsed}
+                        className="text-6xl font-bold tracking-tighter text-notion-text tabular-nums"
+                        style={{ textShadow: "0 0 30px rgba(251,191,36,0.22), 0 0 8px rgba(251,191,36,0.12)" }}
+                    />
                 </div>
 
                 <button

@@ -47,7 +47,7 @@ export default function TaskItem({
     };
 
     return (
-        <div className="glass-card flex items-center justify-between group transition-premium hover:-translate-y-0.5 hover:shadow-sm">
+        <div className="glass-card flex items-center justify-between group transition-premium">
             <div className="flex-1 mr-8">
                 {isEditing ? (
                     <div className="flex items-center gap-4">
@@ -56,13 +56,13 @@ export default function TaskItem({
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             autoFocus
-                            className="flex-1 px-4 py-2 glass-inset rounded-xl focus:outline-none focus:ring-1 focus:ring-black/20 text-sm font-medium"
+                            className="flex-1 px-4 py-2 glass-inset focus:outline-none focus:ring-2 focus:ring-black/10 rounded-xl text-sm font-medium text-notion-text"
                             onKeyDown={(e) => e.key === "Enter" && handleRename()}
                         />
-                        <button onClick={handleRename} className="p-2 text-notion-text hover:bg-notion-hover rounded-md transition-colors">
+                        <button onClick={handleRename} className="p-2 text-notion-text hover:bg-white/60 rounded-md transition-colors">
                             <Check size={18} />
                         </button>
-                        <button onClick={() => setIsEditing(false)} className="p-2 text-notion-text-light hover:bg-notion-hover rounded-md transition-colors">
+                        <button onClick={() => setIsEditing(false)} className="p-2 text-notion-text-light hover:bg-white/60 rounded-md transition-colors">
                             <X size={18} />
                         </button>
                     </div>
@@ -99,7 +99,7 @@ export default function TaskItem({
                 {!isActive && (
                     <button
                         onClick={() => onStart(task.id)}
-                        className="p-2 text-notion-text hover:bg-notion-hover rounded-md flex items-center gap-0 hover:gap-2 overflow-hidden transition-all duration-300 group/play"
+                        className="p-2 text-notion-text hover:bg-white/60 rounded-md flex items-center gap-0 hover:gap-2 overflow-hidden transition-all duration-300 group/play"
                         title="Start Timer"
                     >
                         <Play size={14} fill="currentColor" className="shrink-0" />
@@ -112,14 +112,14 @@ export default function TaskItem({
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     <button
                         onClick={() => setIsEditing(true)}
-                        className="p-2 text-notion-text-light hover:text-notion-text hover:bg-notion-hover rounded-md transition-all"
+                        className="p-2 text-notion-text-light hover:text-notion-text hover:bg-white/60 rounded-md transition-all"
                         title="Rename"
                     >
                         <Edit2 size={14} />
                     </button>
                     <button
                         onClick={() => onDelete(task.id)}
-                        className="p-2 text-notion-text-light hover:text-notion-text hover:bg-notion-hover rounded-md transition-all"
+                        className="p-2 text-notion-text-light hover:text-notion-text hover:bg-white/60 rounded-md transition-all"
                         title="Delete"
                     >
                         <Trash2 size={14} />
@@ -127,8 +127,8 @@ export default function TaskItem({
                 </div>
 
                 {isActive && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 border border-notion-border text-notion-text rounded-md text-[10px] font-bold uppercase tracking-wider bg-notion-sidebar animate-breathe">
-                        <div className="w-1.5 h-1.5 rounded-full bg-notion-primary" />
+                    <div className="flex items-center gap-2 px-3 py-1.5 border border-notion-border text-notion-text rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white/60 backdrop-blur animate-breathe">
+                        <div className="w-1.5 h-1.5 rounded-full bg-notion-primary animate-pulse" />
                         <span>Live</span>
                     </div>
                 )}

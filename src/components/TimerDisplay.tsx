@@ -1,22 +1,15 @@
 import { formatDuration } from "@/lib/timeUtils";
+import React from "react";
 
-/**
- * Props for the TimerDisplay component.
- */
 interface TimerDisplayProps {
-    /** Elapsed time in milliseconds to display. */
     elapsed: number;
-    /** Optional additional CSS classes for styling. */
     className?: string;
+    style?: React.CSSProperties;
 }
 
-/**
- * Pure presentation component that formats and displays a duration.
- * Uses a monospace font and tabular numerals for stable layout during ticking.
- */
-export default function TimerDisplay({ elapsed, className = "" }: TimerDisplayProps) {
+export default function TimerDisplay({ elapsed, className = "", style }: TimerDisplayProps) {
     return (
-        <div className={`font-mono text-2xl tabular-nums ${className}`}>
+        <div className={`font-mono text-2xl tabular-nums ${className}`} style={style}>
             {formatDuration(elapsed)}
         </div>
     );

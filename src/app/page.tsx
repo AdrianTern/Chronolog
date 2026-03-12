@@ -28,8 +28,9 @@ export default function Dashboard() {
       setNotifPermission(permission);
       setIsNotifEnabled(notifications.areNotificationsEnabled());
 
-      // Request permission automatically on first access
-      if (permission === "default") {
+      // Only request permission automatically on desktop — not applicable on mobile/tablet
+      const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+      if (permission === "default" && isDesktop) {
         const result = await notifications.requestNotificationPermission();
         setNotifPermission(result);
         if (result === "granted") {
@@ -54,7 +55,7 @@ export default function Dashboard() {
       // Enable case: Trigger browser prompt and update storage if granted
       const result = await notifications.requestNotificationPermission();
       setNotifPermission(result);
-      
+
       if (result === "granted") {
         notifications.setNotificationsEnabled(true);
         setIsNotifEnabled(true);
@@ -74,8 +75,8 @@ export default function Dashboard() {
   return (
     <main className="py-16 animate-slide-up">
       <header className="flex items-center justify-between mb-24">
-        <div className="flex items-center gap-6">
-          <div className="w-14 h-14 bg-white rounded-xl shadow-sm border border-notion-border flex items-center justify-center overflow-hidden p-3 text-notion-text">
+        <div className="flex items-center gap-4">
+          <div className="logo-glass w-14 h-14 flex items-center justify-center overflow-hidden p-3 border border-notion-border rounded-xl">
             <Image src="/logo.png" alt="Chronolog Logo" width={32} height={32} priority />
           </div>
           <div>
@@ -84,44 +85,46 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={handleToggleNotifications}
-            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-notion-hover transition-colors text-notion-secondary-text"
+            className="btn-icon hidden lg:inline-flex"
             title={showNotificationsActive ? "Notifications Enabled" : "Notifications Disabled"}
           >
             {showNotificationsActive ? (
-              <Bell size={20} className="text-notion-text" />
+              <Bell size={18} className="text-notion-text" />
             ) : (
-              <BellOff size={20} />
+              <BellOff size={18} className="text-notion-text-light" />
             )}
           </button>
 
-          <Link
-            href="/reports"
-            className="btn-secondary"
-          >
-            <BarChart2 size={18} className="text-notion-text" />
+          <Link href="/reports" className="btn-secondary">
+            <BarChart2 size={16} className="text-notion-text" />
             <span>Insights</span>
           </Link>
         </div>
       </header>
 
       <div className="space-y-24">
-        {activeTask && (
-          <section>
-            <span className="section-label">Active Now</span>
-            <RunningTaskCard
-              task={activeTask}
-              elapsed={elapsed}
-              onStop={stopTimer}
-            />
-          </section>
-        )}
 
-        <section>
-          <span className="section-label">New Task</span>
-          <AddTaskInput onAdd={handleAddTask} />
+        <section className="card-premium space-y-6">
+          {activeTask && (
+            <>
+              <div>
+                <span className="section-label">Active Now</span>
+                <RunningTaskCard
+                  task={activeTask}
+                  elapsed={elapsed}
+                  onStop={stopTimer}
+                />
+              </div>
+              <hr className="border-notion-border" />
+            </>
+          )}
+          <div>
+            <span className="section-label">{activeTask ? "Switch Task" : "New Task"}</span>
+            <AddTaskInput onAdd={handleAddTask} />
+          </div>
         </section>
 
         <section>

@@ -19,13 +19,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-white">
+      <body className="antialiased min-h-screen">
+        {/* Ambient background orbs for liquid glass depth */}
+        <div className="bg-orb-container" aria-hidden="true">
+          <div className="bg-orb bg-orb-1" />
+          <div className="bg-orb bg-orb-2" />
+          <div className="bg-orb bg-orb-3" />
+        </div>
         <div className="relative z-0 min-h-screen py-10">
           <main className="container-tight">
             {children}
           </main>
           <footer className="mt-20 py-10 text-center">
-            <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-notion-text-light opacity-50">
+            <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-notion-text-light opacity-40">
               Crafted with Precision • 2026
             </p>
           </footer>
