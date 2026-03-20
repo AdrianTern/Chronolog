@@ -45,12 +45,23 @@ export const useTasks = () => {
         }
     }, [refreshTasks]);
 
+    const toggleFavoriteTask = useCallback((taskId: string) => {
+        const allTasks = storage.loadTasks();
+        const task = allTasks.find((t) => t.id === taskId);
+        if (task) {
+            task.isFavorite = !task.isFavorite;
+            storage.updateTask(task);
+            refreshTasks();
+        }
+    }, [refreshTasks]);
+
     return {
         tasks,
         addTask,
         updateTask,
         deleteTask,
         renameTask,
+        toggleFavoriteTask,
         refreshTasks,
     };
 };

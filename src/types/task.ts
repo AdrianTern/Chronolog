@@ -9,6 +9,7 @@ export type Task = {
   name: string;
   createdAt: number;
   sessions: Session[];
+  isFavorite?: boolean;
 };
 
 export type AppData = {

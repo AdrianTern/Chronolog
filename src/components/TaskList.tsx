@@ -1,5 +1,6 @@
 import { Task } from "@/types/task";
-import TaskItem from "./TaskItem";
+import { buildTaskTree } from "@/lib/taskHierarchy";
+import TaskGroup from "./TaskGroup";
 
 /**
  * Props for the TaskList component.
@@ -15,6 +16,8 @@ interface TaskListProps {
     onDelete: (id: string) => void;
     /** Callback triggered to rename a task. */
     onRename: (id: string, name: string) => void;
+    /** Callback triggered to toggle favorite status on a task. */
+    onToggleFavorite: (id: string) => void;
 }
 
 /**
@@ -27,6 +30,7 @@ export default function TaskList({
     onStart,
     onDelete,
     onRename,
+    onToggleFavorite,
 }: TaskListProps) {
     if (tasks.length === 0) {
         return (
@@ -36,21 +40,37 @@ export default function TaskList({
         );
     }
 
+    // Build the hierarchical tree and get the root nodes
+    const rootNodes = buildTaskTree(tasks);
+
+    // Sort roots: active > alphabetical.
+    const sortedRoots = rootNodes.slice().sort((a, b) => {
+        // Helper to check if a node or its children contain the active task
+        const isActiveNode = (n: typeof rootNodes[0]) => 
+            n.id === activeTaskId || n.children.some(c => c.id === activeTaskId);
+
+        const aActive = isActiveNode(a) ? 0 : 1;
+        const bActive = isActiveNode(b) ? 0 : 1;
+        
+        if (aActive !== bActive) return aActive - bActive;
+        
+        return 0; // Maintain existing buildTaskTree sort order (alphabetical)
+    });
+
     return (
         <div className="flex flex-col gap-3">
-            {tasks
-                .sort((a, b) => b.createdAt - a.createdAt)
-                .map((task, idx) => (
-                    <div key={task.id} className="animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
-                        <TaskItem
-                            task={task}
-                            isActive={task.id === activeTaskId}
-                            onStart={onStart}
-                            onDelete={onDelete}
-                            onRename={onRename}
-                        />
-                    </div>
-                ))}
+            {sortedRoots.map((rootNode, idx) => (
+                <div key={rootNode.id} className="animate-fade-in" style={{ animationDelay: `${idx * 0.05}s` }}>
+                    <TaskGroup
+                        node={rootNode}
+                        activeTaskId={activeTaskId}
+                        onStart={onStart}
+                        onDelete={onDelete}
+                        onRename={onRename}
+                        onToggleFavorite={onToggleFavorite}
+                    />
+                </div>
+            ))}
         </div>
     );
 }

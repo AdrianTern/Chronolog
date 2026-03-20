@@ -26,34 +26,34 @@ export default function RunningTaskCard({
     onStop,
 }: RunningTaskCardProps) {
     return (
-        <div className="card-premium flex flex-col md:flex-row items-center justify-between gap-10 transition-all group">
-            <div className="flex-1 text-center md:text-left relative z-10">
-                <div className="flex items-center gap-2 justify-center md:justify-start mb-4 animate-breathe">
-                    <div className="w-1.5 h-1.5 rounded-full bg-notion-primary animate-pulse" />
-                    <span className="text-notion-text-light text-[10px] font-bold uppercase tracking-[0.2em]">
-                        Current Activity
+        <div className="flex flex-col items-center justify-center py-4 gap-6 transition-all group animate-fade-in">
+            <div className="text-center relative z-10">
+                <div className="flex items-center gap-2 justify-center mb-2 animate-breathe">
+                    <div className="w-1 h-1 rounded-full bg-notion-primary animate-pulse" />
+                    <span className="text-notion-text-light text-[9px] font-bold uppercase tracking-[0.2em]">
+                        Active Task
                     </span>
                 </div>
-                <h2 className="text-3xl font-bold tracking-tight text-notion-text leading-tight">
+                <h2 className="text-xl font-bold tracking-tight text-notion-text leading-tight">
                     {task.name}
                 </h2>
             </div>
 
-            <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
+            <div className="flex flex-col items-center gap-6 relative z-10 w-full">
                 <div className="relative">
                     <TimerDisplay
                         elapsed={elapsed}
-                        className="text-6xl font-bold tracking-tighter text-notion-text tabular-nums"
-                        style={{ textShadow: "0 0 30px rgba(251,191,36,0.22), 0 0 8px rgba(251,191,36,0.12)" }}
+                        className="text-4xl font-bold tracking-tighter text-notion-text tabular-nums"
+                        style={{ textShadow: "0 0 20px rgba(251,191,36,0.15)" }}
                     />
                 </div>
 
                 <button
                     onClick={onStop}
-                    className="btn-primary"
+                    className="btn-primary px-6 py-2 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 bg-notion-text hover:bg-black group/btn"
                 >
-                    <Square size={18} fill="currentColor" className="group-hover:rotate-90 transition-transform duration-500" />
-                    <span className="uppercase text-[11px] font-bold tracking-widest text-white">Stop</span>
+                    <Square size={14} fill="currentColor" className="group-hover/btn:rotate-90 transition-transform duration-500" />
+                    <span className="uppercase text-[10px] font-bold tracking-[0.2em] text-white">Pause</span>
                 </button>
             </div>
         </div>

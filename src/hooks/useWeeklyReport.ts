@@ -2,11 +2,11 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { Task } from "@/types/task";
-import { generateWeeklyReport, WeeklyTaskReport } from "@/lib/reportUtils";
+import { generateWeeklyReport, generateWeeklyReportTree, WeeklyTaskReport } from "@/lib/reportUtils";
 import { addWeeks, subWeeks, endOfWeek, getISOWeek, startOfWeek } from "date-fns";
 import * as storage from "@/lib/storage";
 
-export const useWeeklyReport = (tasks: Task[]) => {
+export const useWeeklyReport = (tasks: Task[], includeZero: boolean = false) => {
     const [currentWeek, setCurrentWeek] = useState(new Date());
     const [ticker, setTicker] = useState(0);
 
@@ -16,6 +16,10 @@ export const useWeeklyReport = (tasks: Task[]) => {
     const report = useMemo(() => {
         return generateWeeklyReport(tasks, currentWeek);
     }, [tasks, currentWeek, ticker]);
+
+    const reportTree = useMemo(() => {
+        return generateWeeklyReportTree(tasks, currentWeek, includeZero);
+    }, [tasks, currentWeek, ticker, includeZero]);
 
     const isFutureWeek = useMemo(() => {
         const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -56,21 +60,24 @@ export const useWeeklyReport = (tasks: Task[]) => {
     const resetToToday = () => setCurrentWeek(new Date());
 
     const totalsByDay = useMemo(() => {
-        if (report.length === 0) return Array(7).fill(0);
+        if (reportTree.length === 0) return Array(7).fill(0);
 
         const dayTotals = Array(7).fill(0);
-        report.forEach(taskReport => {
-            taskReport.days.forEach((day, idx) => {
+        // By summing only the root nodes of the reportTree, we automatically
+        // include all subtask times without any double-counting.
+        reportTree.forEach(rootNode => {
+            rootNode.days.forEach((day, idx) => {
                 dayTotals[idx] += day.totalMs;
             });
         });
         return dayTotals;
-    }, [report]);
+    }, [reportTree]);
 
     const grandTotal = totalsByDay.reduce((acc, val) => acc + val, 0);
 
     return {
         report,
+        reportTree,
         currentWeek,
         nextWeek,
         prevWeek,

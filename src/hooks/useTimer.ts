@@ -180,9 +180,34 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
     }, [activeTaskId, stopTimer, refreshTasks]);
 
     const activeTask = tasks.find((t) => t.id === activeTaskId) || null;
+    
+    // Determine the last task: 
+    // 1. If only one task in backlog, use that (unless it's already active)
+    // 2. Otherwise, find the task with the most recently completed session
+    let lastTask: Task | null = null;
+    
+    if (tasks.length === 1) {
+        if (tasks[0].id !== activeTaskId) {
+            lastTask = tasks[0];
+        }
+    } else if (tasks.length > 1) {
+        let latestEndTime = -1;
+        
+        for (const task of tasks) {
+            if (task.id === activeTaskId) continue;
+            
+            for (const session of task.sessions) {
+                if (session.endTime && session.endTime > latestEndTime) {
+                    latestEndTime = session.endTime;
+                    lastTask = task;
+                }
+            }
+        }
+    }
 
     return {
         activeTask,
+        lastTask,
         elapsed,
         startTimer,
         stopTimer,
