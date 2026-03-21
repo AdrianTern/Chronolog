@@ -12,29 +12,14 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [elapsed, setElapsed] = useState(0);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    // Tracks whether the daily-budget alert has already been sent for the current task/day
+    const budgetAlertSentRef = useRef<{ taskId: string; date: string } | null>(null);
+    const lastBreakReminderRef = useRef<number>(0);
+    const idleWarningSentRef = useRef<boolean>(false);
+    const lastSessionIdRef = useRef<string | null>(null);
 
     // Sync with storage on mount and when tasks change
     useEffect(() => {
-        // Handle retroactive auto-pause before initializing state
-        const pendingPause = storage.getPendingAutoPause();
-        if (pendingPause) {
-            const now = Date.now();
-            if (now > pendingPause.pauseAt) {
-                // Retroactively close the session at the 15m mark
-                const allTasks = storage.loadTasks();
-                const tIdx = allTasks.findIndex(t => t.id === pendingPause.taskId);
-                if (tIdx !== -1) {
-                    const sIdx = allTasks[tIdx].sessions.findIndex(s => s.id === pendingPause.sessionId);
-                    if (sIdx !== -1 && allTasks[tIdx].sessions[sIdx].endTime === null) {
-                        allTasks[tIdx].sessions[sIdx].endTime = pendingPause.pauseAt;
-                        storage.saveTasks(allTasks);
-                        refreshTasks();
-                    }
-                }
-            }
-            storage.clearPendingAutoPause();
-        }
-
         const runningTask = tasks.find((t) =>
             t.sessions.some((s) => s.endTime === null)
         );
@@ -59,16 +44,52 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
                 // Cache the start of today and previous total to avoid recalculating every second,
                 // significantly improving tick performance.
                 let cachedStartOfToday = new Date().setHours(0, 0, 0, 0);
-                let cachedPreviousTotal = task.sessions
-                    .filter((s) =>
-                        s.id !== session.id &&
-                        s.endTime !== null &&
-                        s.endTime > cachedStartOfToday
-                    )
-                    .reduce((total, s) => {
-                        const sessionStart = Math.max(s.startTime, cachedStartOfToday);
-                        return total + (s.endTime! - sessionStart);
-                    }, 0);
+                
+                // Helper to get rollup total for today (this task + all descendants)
+                const getRollupPreviousTotal = (t: Task, sId: string, startOfToday: number) => {
+                    // 1. This task's previous sessions today
+                    let total = t.sessions
+                        .filter((s) =>
+                            s.id !== sId &&
+                            s.endTime !== null &&
+                            s.endTime > startOfToday
+                        )
+                        .reduce((acc, s) => {
+                            const sessionStart = Math.max(s.startTime, startOfToday);
+                            return acc + (s.endTime! - sessionStart);
+                        }, 0);
+
+                    // 2. All descendants' daily totals
+                    const prefix = t.name + "/";
+                    const descendants = tasks.filter(other => other.name.startsWith(prefix));
+                    
+                    descendants.forEach(d => {
+                        total += d.sessions.reduce((acc, s) => {
+                            const sessionStart = Math.max(s.startTime, startOfToday);
+                            const sessionEnd = s.endTime || Date.now();
+                            if (sessionEnd <= startOfToday) return acc;
+                            
+                            const intersectionStart = sessionStart;
+                            const intersectionEnd = Math.min(sessionEnd, Date.now()); // If it's the active session of a child (unlikely but safe)
+                            
+                            // Note: We use calculateDailyTotal logic here manually for efficiency
+                            const dailyStart = Math.max(s.startTime, startOfToday);
+                            const dailyEnd = s.endTime || Date.now();
+                            return acc + (dailyEnd > dailyStart ? dailyEnd - dailyStart : 0);
+                        }, 0);
+                    });
+
+                    return total;
+                };
+
+                let cachedPreviousTotal = getRollupPreviousTotal(task, session.id, cachedStartOfToday);
+
+                // Reset notification refs if session changed
+                if (lastSessionIdRef.current !== session.id) {
+                    lastSessionIdRef.current = session.id;
+                    lastBreakReminderRef.current = 0;
+                    idleWarningSentRef.current = false;
+                }
 
                 const updateElapsed = () => {
                     const currentStartOfToday = new Date().setHours(0, 0, 0, 0);
@@ -76,22 +97,68 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
                     // Recalculate if we crossed midnight while the timer is running
                     if (currentStartOfToday !== cachedStartOfToday) {
                         cachedStartOfToday = currentStartOfToday;
-                        cachedPreviousTotal = task.sessions
-                            .filter((s) =>
-                                s.id !== session.id &&
-                                s.endTime !== null &&
-                                s.endTime > cachedStartOfToday
-                            )
-                            .reduce((total, s) => {
-                                const sessionStart = Math.max(s.startTime, cachedStartOfToday);
-                                return total + (s.endTime! - sessionStart);
-                            }, 0);
+                        cachedPreviousTotal = getRollupPreviousTotal(task, session.id, cachedStartOfToday);
                     }
 
                     const currentSessionStart = Math.max(session.startTime, cachedStartOfToday);
                     const currentSessionElapsed = Date.now() > currentSessionStart ? Date.now() - currentSessionStart : 0;
+                    const newElapsed = cachedPreviousTotal + currentSessionElapsed;
 
-                    setElapsed(cachedPreviousTotal + currentSessionElapsed);
+                    setElapsed(newElapsed);
+
+                    // --- Daily budget / overtime alert ---
+                    const budget = task.dailyBudgetMs;
+                    if (budget && budget > 0) {
+                        const today = new Date().toDateString();
+                        const alreadySent =
+                            budgetAlertSentRef.current?.taskId === task.id &&
+                            budgetAlertSentRef.current?.date === today;
+
+                        if (!alreadySent && newElapsed >= budget) {
+                            budgetAlertSentRef.current = { taskId: task.id, date: today };
+                            const budgetLabel = budget >= 3600000
+                                ? `${budget / 3600000}h`
+                                : `${budget / 60000}m`;
+                            notifications.sendNotification(`⚠️ Budget Exceeded: ${task.name}`, {
+                                body: `You've exceeded your ${budgetLabel} budget for '${task.name}' today.`,
+                                tag: `budget-${task.id}`,
+                            });
+                        }
+                    }
+
+                    // --- Notifications Logic ---
+                    const settings = storage.getNotificationSettings();
+                    if (settings.enabled) {
+                        // 1. Break Reminders
+                        if (settings.breakReminder.enabled) {
+                            const bThreshold = settings.breakReminder.thresholdMs;
+                            const currentBInterval = Math.floor(newElapsed / bThreshold);
+                            const lastBInterval = Math.floor(lastBreakReminderRef.current / bThreshold);
+
+                            if (currentBInterval > lastBInterval && currentBInterval > 0) {
+                                lastBreakReminderRef.current = newElapsed;
+                                const hrs = currentBInterval * (bThreshold / 3600000);
+                                notifications.sendNotification(`☕ Take a break: ${task.name}`, {
+                                    body: `You've been on '${task.name}' for ${hrs} ${hrs === 1 ? 'hour' : 'hours'}. Time for a quick break?`,
+                                    tag: `break-${task.id}`,
+                                });
+                            }
+                        }
+
+                        // 2. Idle / Forgotten Timer Warning
+                        if (settings.idleWarning.enabled) {
+                            const iThreshold = settings.idleWarning.thresholdMs;
+                            if (newElapsed >= iThreshold && !idleWarningSentRef.current) {
+                                idleWarningSentRef.current = true;
+                                const hrs = iThreshold / 3600000;
+                                notifications.sendNotification(`🕒 Idle Warning: ${task.name}`, {
+                                    body: `Your timer for '${task.name}' has been running for ${hrs} hours — is it still active?`,
+                                    tag: `idle-${task.id}`,
+                                    requireInteraction: true,
+                                });
+                            }
+                        }
+                    }
                 };
                 
                 updateElapsed();
@@ -107,31 +174,6 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
         };
     }, [activeTaskId, activeSessionId, tasks]);
 
-    // Handle tab close / refresh: Alert user and set auto-pause deadline
-    useEffect(() => {
-        const handleBeforeUnload = () => {
-            if (activeTaskId && activeSessionId) {
-                const activeTask = tasks.find(t => t.id === activeTaskId);
-                
-                // 1. Send immediate notification
-                notifications.sendNotification("Chronolog: Ongoing Activity", {
-                    body: `Task '${activeTask?.name || "unnamed"}' is still running. It will auto-pause in 15 minutes if you don't return.`,
-                    tag: "active-task-alert",
-                    requireInteraction: true,
-                });
-
-                // 2. Set the 15-minute deadline in storage
-                storage.setPendingAutoPause({
-                    taskId: activeTaskId,
-                    sessionId: activeSessionId,
-                    pauseAt: Date.now() + 15 * 60 * 1000 // 15 minutes from now
-                });
-            }
-        };
-
-        window.addEventListener("beforeunload", handleBeforeUnload);
-        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-    }, [activeTaskId, activeSessionId, tasks]);
 
     const stopTimer = useCallback(() => {
         if (!activeTaskId || !activeSessionId) return;

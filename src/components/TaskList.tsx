@@ -18,6 +18,8 @@ interface TaskListProps {
     onRename: (id: string, name: string) => void;
     /** Callback triggered to toggle favorite status on a task. */
     onToggleFavorite: (id: string) => void;
+    /** Callback triggered to set a per-task daily budget. */
+    onSetBudget: (id: string, budgetMs: number | null) => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function TaskList({
     onDelete,
     onRename,
     onToggleFavorite,
+    onSetBudget,
 }: TaskListProps) {
     if (tasks.length === 0) {
         return (
@@ -68,6 +71,7 @@ export default function TaskList({
                         onDelete={onDelete}
                         onRename={onRename}
                         onToggleFavorite={onToggleFavorite}
+                        onSetBudget={onSetBudget}
                     />
                 </div>
             ))}

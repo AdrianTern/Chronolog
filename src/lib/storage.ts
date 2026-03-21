@@ -1,4 +1,4 @@
-import { AppData, Task } from "@/types/task";
+import { AppData, Task, NotificationSettings } from "@/types/task";
 
 const STORAGE_KEY = "time-tracker-data";
 
@@ -74,3 +74,87 @@ export const clearPendingAutoPause = () => {
     if (!isBrowser) return;
     localStorage.removeItem("chronolog-pending-autopause");
 };
+
+/** Get the global reminder interval in ms. null = disabled. */
+export const getGlobalReminderInterval = (): number | null => {
+    if (!isBrowser) return null;
+    const raw = localStorage.getItem("chronolog-global-reminder");
+    if (raw === null) return null;
+    const parsed = parseInt(raw);
+    return isNaN(parsed) || parsed === 0 ? null : parsed;
+};
+
+/** Set the global reminder interval in ms. Pass null to disable. */
+export const setGlobalReminderInterval = (ms: number | null) => {
+    if (!isBrowser) return;
+    if (ms === null) {
+        localStorage.removeItem("chronolog-global-reminder");
+    } else {
+        localStorage.setItem("chronolog-global-reminder", ms.toString());
+    }
+};
+
+/** Get the daily goal in ms. Defaults to 8h (28,800,000 ms) if not set. */
+export const getDailyGoal = (): number => {
+    if (!isBrowser) return 8 * 3600000;
+    const raw = localStorage.getItem("chronolog-daily-goal");
+    if (raw === null) return 8 * 3600000;
+    const parsed = parseInt(raw);
+    const goal = isNaN(parsed) || parsed <= 0 ? 8 * 3600000 : parsed;
+    return Math.min(24 * 3600000, goal);
+};
+
+/** Set the daily goal in ms. */
+export const setDailyGoal = (ms: number) => {
+    if (!isBrowser) return;
+    localStorage.setItem("chronolog-daily-goal", ms.toString());
+};
+
+/** Check if daily goal is enabled. Defaults to false. */
+export const isDailyGoalEnabled = (): boolean => {
+    if (!isBrowser) return false;
+    return localStorage.getItem("chronolog-daily-goal-enabled") === "true";
+};
+
+/** Set if daily goal is enabled. */
+export const setDailyGoalEnabled = (enabled: boolean) => {
+    if (!isBrowser) return;
+    localStorage.setItem("chronolog-daily-goal-enabled", enabled.toString());
+};
+
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+    enabled: true,
+    breakReminder: {
+        enabled: false,
+        thresholdMs: 3600000, // 1h
+    },
+    overtimeAlert: {
+        enabled: true,
+    },
+    idleWarning: {
+        enabled: true,
+        thresholdMs: 14400000, // 4h
+    },
+    dailyGoalMilestones: {
+        enabled: true,
+    },
+};
+
+/** Get global notification settings. */
+export const getNotificationSettings = (): NotificationSettings => {
+    if (!isBrowser) return DEFAULT_NOTIFICATION_SETTINGS;
+    const raw = localStorage.getItem("chronolog-notification-settings");
+    if (!raw) return DEFAULT_NOTIFICATION_SETTINGS;
+    try {
+        return { ...DEFAULT_NOTIFICATION_SETTINGS, ...JSON.parse(raw) };
+    } catch {
+        return DEFAULT_NOTIFICATION_SETTINGS;
+    }
+};
+
+/** Save global notification settings. */
+export const saveNotificationSettings = (settings: NotificationSettings) => {
+    if (!isBrowser) return;
+    localStorage.setItem("chronolog-notification-settings", JSON.stringify(settings));
+};
+

@@ -62,3 +62,12 @@ export const formatTimeShort = (ms: number): string => {
     const pad = (n: number) => n.toString().padStart(2, "0");
     return `${pad(hours)}:${pad(minutes)}`;
 };
+
+/** Format ms as h:m:s for budget/goal displays */
+export const formatHms = (ms: number): string => {
+    const totalSecs = Math.floor(ms / 1000);
+    const h = Math.floor(totalSecs / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const s = totalSecs % 60;
+    return `${h}:${m}:${s}`;
+};

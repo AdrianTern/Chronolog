@@ -1,10 +1,18 @@
-"use client";
-
 import { Task } from "@/types/task";
 import { calculateTaskTotal, formatTimeShort, calculateDailyTotal, calculateWeeklyTotal } from "@/lib/timeUtils";
-import { Hourglass, Trash2, Edit2, Check, X, Clock, Calendar, BarChart3, Radio, Star } from "lucide-react";
+import { ClipboardClock, Hourglass, Trash2, Edit2, Check, X, Clock, Calendar, BarChart3, Radio, Star } from "lucide-react";
 import { useState } from "react";
 import { getDisplayName } from "@/lib/taskHierarchy";
+
+/** Convert a dailyBudgetMs value to a human-readable label like "2h budget" */
+const formatBudgetLabel = (ms: number | null | undefined): string => {
+    if (!ms) return "";
+    if (ms >= 3600000 && ms % 3600000 === 0) return `${ms / 3600000}h budget`;
+    const totalMins = Math.round(ms / 60000);
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    return h > 0 ? `${h}h${m > 0 ? `${m}m` : ""} budget` : `${m}m budget`;
+};
 
 /**
  * Props for the TaskItem component.
@@ -29,6 +37,8 @@ interface TaskItemProps {
     onRename: (id: string, name: string) => void;
     /** Callback triggered to toggle favorite status. */
     onToggleFavorite: (id: string) => void;
+    /** Callback triggered to set a per-task daily budget in ms. null = clear. */
+    onSetBudget: (id: string, budgetMs: number | null) => void;
 }
 
 /**
@@ -46,9 +56,14 @@ export default function TaskItem({
     onDelete,
     onRename,
     onToggleFavorite,
+    onSetBudget,
 }: TaskItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [newName, setNewName] = useState(task.name);
+    // Budget stored as hours string for easy text input (e.g. "2" or "1.5")
+    const [pendingBudgetHours, setPendingBudgetHours] = useState<string>(
+        task.dailyBudgetMs ? String(task.dailyBudgetMs / 3600000) : ""
+    );
 
     const displayName = getDisplayName(task.name);
 
@@ -66,11 +81,18 @@ export default function TaskItem({
         if (newName.trim() && newName !== task.name) {
             onRename(task.id, newName.trim());
         }
+        // Apply the pending budget change
+        const budgetMs = pendingBudgetHours.trim()
+            ? Math.round(parseFloat(pendingBudgetHours) * 3600000)
+            : null;
+        onSetBudget(task.id, budgetMs && budgetMs > 0 ? budgetMs : null);
         setIsEditing(false);
     };
 
+    const hasBudget = !!task.dailyBudgetMs;
+
     return (
-        <div 
+        <div
             className={`glass-card flex items-center justify-between group transition-premium ${onClick ? 'cursor-pointer' : ''} ${hasActiveDescendant ? 'ring-1 ring-notion-primary/50 animate-pulse-glow bg-notion-primary/5' : ''}`}
             onClick={(e) => {
                 if ((e.target as HTMLElement).closest('button, input')) return;
@@ -79,15 +101,27 @@ export default function TaskItem({
         >
             <div className="flex-1 mr-8">
                 {isEditing ? (
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
                         <input
                             type="text"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
                             autoFocus
-                            className="flex-1 px-4 py-2 glass-inset focus:outline-none focus:ring-2 focus:ring-black/10 rounded-xl text-sm font-medium text-notion-text"
+                            className="flex-1 min-w-[160px] px-4 py-2 glass-inset focus:outline-none focus:ring-2 focus:ring-black/10 rounded-xl text-sm font-medium text-notion-text"
                             onKeyDown={(e) => e.key === "Enter" && handleRename()}
                         />
+                        <div className="flex items-center gap-1.5" title="Daily time budget (hours)">
+                            <ClipboardClock size={13} className="text-notion-text-light" />
+                            <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                placeholder="Budget (hrs)"
+                                value={pendingBudgetHours}
+                                onChange={(e) => setPendingBudgetHours(e.target.value)}
+                                className="w-28 text-xs bg-white/70 border border-notion-border rounded-lg px-2 py-1.5 text-notion-text focus:outline-none focus:ring-2 focus:ring-black/10"
+                            />
+                        </div>
                         <button onClick={handleRename} className="p-2 text-notion-text hover:bg-white/60 rounded-md transition-colors">
                             <Check size={18} />
                         </button>
@@ -97,12 +131,21 @@ export default function TaskItem({
                     </div>
                 ) : (
                     <div>
-                        <h3 
+                        <h3
                             className="text-lg font-bold text-notion-text mb-2 leading-tight flex items-center gap-2"
-                            title={task.name} // Full path on hover
+                            title={task.name}
                         >
                             {task.isFavorite && <Star size={16} className="fill-amber-400 text-amber-400 shrink-0" />}
                             <span className="truncate">{displayName}</span>
+                            {hasBudget && (
+                                <span
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-orange-50 border border-orange-200 text-orange-500 shrink-0"
+                                    title={`Daily budget: ${formatBudgetLabel(task.dailyBudgetMs)}`}
+                                >
+                                    <ClipboardClock size={9} />
+                                    {formatBudgetLabel(task.dailyBudgetMs)}
+                                </span>
+                            )}
                             {hasActiveDescendant && (
                                 <div className="ml-3 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-notion-primary/10 text-notion-primary border border-notion-primary/20 animate-breathe shadow-sm">
                                     <Radio size={10} className="animate-pulse" />

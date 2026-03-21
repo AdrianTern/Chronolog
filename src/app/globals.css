@@ -399,6 +399,24 @@
     animation-delay: 0.30s;
   }
 
+  @keyframes slideInLeft {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+
+  @keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
   /* ---- TRANSITION UTIL ---- */
   .transition-premium {
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);

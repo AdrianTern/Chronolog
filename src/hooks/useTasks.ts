@@ -55,6 +55,16 @@ export const useTasks = () => {
         }
     }, [refreshTasks]);
 
+    const setTaskDailyBudget = useCallback((taskId: string, budgetMs: number | null) => {
+        const allTasks = storage.loadTasks();
+        const task = allTasks.find((t) => t.id === taskId);
+        if (task) {
+            task.dailyBudgetMs = budgetMs;
+            storage.updateTask(task);
+            refreshTasks();
+        }
+    }, [refreshTasks]);
+
     return {
         tasks,
         addTask,
@@ -62,6 +72,7 @@ export const useTasks = () => {
         deleteTask,
         renameTask,
         toggleFavoriteTask,
+        setTaskDailyBudget,
         refreshTasks,
     };
 };

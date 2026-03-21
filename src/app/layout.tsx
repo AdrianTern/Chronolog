@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 
 export const metadata: Metadata = {
-  title: "Chronolog | Minimalist Time Tracking",
+  title: "Chronolog | Precision Time Tracking",
   description: "Track your time with elegance and simplicity.",
 };
 
