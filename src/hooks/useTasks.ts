@@ -65,6 +65,35 @@ export const useTasks = () => {
         }
     }, [refreshTasks]);
 
+    const resetTaskDailyTime = useCallback((taskId: string) => {
+        const allTasks = storage.loadTasks();
+        const task = allTasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+
+        // --- Recursive Logic ---
+        // Find all tasks that are descendants of this one (based on name prefix)
+        const prefix = task.name + "/";
+        const targets = allTasks.filter(t => t.id === taskId || t.name.startsWith(prefix));
+
+        targets.forEach(t => {
+            // 1. Remove sessions that started today
+            // 2. Truncate sessions that started before today but ended (or are active) today
+            t.sessions = t.sessions
+                .filter((s) => s.startTime < startOfToday)
+                .map((s) => {
+                    if (s.endTime === null || s.endTime > startOfToday) {
+                        return { ...s, endTime: startOfToday - 1 };
+                    }
+                    return s;
+                });
+        });
+
+        storage.saveTasks(allTasks);
+        refreshTasks();
+    }, [refreshTasks]);
+
     return {
         tasks,
         addTask,
@@ -73,6 +102,7 @@ export const useTasks = () => {
         renameTask,
         toggleFavoriteTask,
         setTaskDailyBudget,
+        resetTaskDailyTime,
         refreshTasks,
     };
 };

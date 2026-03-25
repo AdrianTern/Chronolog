@@ -12,6 +12,7 @@ interface TaskGroupProps {
     onRename: (id: string, name: string) => void;
     onToggleFavorite: (id: string) => void;
     onSetBudget: (id: string, budgetMs: number | null) => void;
+    onResetToday: (id: string) => void;
 }
 
 export default function TaskGroup({
@@ -21,7 +22,8 @@ export default function TaskGroup({
     onDelete,
     onRename,
     onToggleFavorite,
-    onSetBudget
+    onSetBudget,
+    onResetToday
 }: TaskGroupProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     
@@ -51,6 +53,7 @@ export default function TaskGroup({
                         onRename={onRename}
                         onToggleFavorite={onToggleFavorite}
                         onSetBudget={onSetBudget}
+                        onResetToday={onResetToday}
                         indent={0}
                         descendantTasks={allDescendants}
                         hasActiveDescendant={isAnyDescendantActive}
@@ -129,6 +132,7 @@ export default function TaskGroup({
                                         onRename={onRename}
                                         onToggleFavorite={onToggleFavorite}
                                         onSetBudget={onSetBudget}
+                                        onResetToday={onResetToday}
                                     />
                                 ) : (
                                     /* Terminal node */
@@ -141,6 +145,7 @@ export default function TaskGroup({
                                             onRename={onRename}
                                             onToggleFavorite={onToggleFavorite}
                                             onSetBudget={onSetBudget}
+                                            onResetToday={onResetToday}
                                             indent={1}
                                         />
                                     )

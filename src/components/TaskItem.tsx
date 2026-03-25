@@ -1,6 +1,6 @@
 import { Task } from "@/types/task";
 import { calculateTaskTotal, formatTimeShort, calculateDailyTotal, calculateWeeklyTotal } from "@/lib/timeUtils";
-import { ClipboardClock, Hourglass, Trash2, Edit2, Check, X, Clock, Calendar, BarChart3, Radio, Star } from "lucide-react";
+import { ClipboardClock, Hourglass, Trash2, Edit2, Check, X, Clock, Calendar, BarChart3, Radio, Star, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { getDisplayName } from "@/lib/taskHierarchy";
 
@@ -39,6 +39,8 @@ interface TaskItemProps {
     onToggleFavorite: (id: string) => void;
     /** Callback triggered to set a per-task daily budget in ms. null = clear. */
     onSetBudget: (id: string, budgetMs: number | null) => void;
+    /** Callback triggered to reset today's time. */
+    onResetToday: (id: string) => void;
 }
 
 /**
@@ -57,6 +59,7 @@ export default function TaskItem({
     onRename,
     onToggleFavorite,
     onSetBudget,
+    onResetToday,
 }: TaskItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [newName, setNewName] = useState(task.name);
@@ -213,6 +216,18 @@ export default function TaskItem({
                         title="Rename"
                     >
                         <Edit2 size={14} />
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Reset today's time for "${displayName}"?`)) {
+                                onResetToday(task.id);
+                            }
+                        }}
+                        className="p-2 text-notion-text-light hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
+                        title="Reset Today's Time"
+                    >
+                        <RotateCcw size={14} />
                     </button>
                     <button
                         onClick={(e) => {

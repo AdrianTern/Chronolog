@@ -18,11 +18,14 @@ import SettingsDrawer from "@/components/SettingsDrawer";
 import Image from "next/image";
 
 export default function Dashboard() {
-  const { tasks, addTask, deleteTask, renameTask, toggleFavoriteTask, setTaskDailyBudget, refreshTasks } = useTasks();
+  const { tasks, addTask, deleteTask, renameTask, toggleFavoriteTask, setTaskDailyBudget, resetTaskDailyTime, refreshTasks } = useTasks();
   const { activeTask, lastTask, elapsed, startTimer, stopTimer } = useTimer(
     tasks,
     refreshTasks
   );
+
+  const heroTask = activeTask || lastTask;
+  const heroElapsed = activeTask ? elapsed : (heroTask ? calculateDailyTotal(heroTask) : 0);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -65,10 +68,10 @@ export default function Dashboard() {
         <div className="space-y-24">
 
           <section className="card-premium space-y-6">
-            {activeTask && (
+            {heroTask && (
               <>
                 <div className="relative">
-                  <span className="section-label">Active Now</span>
+                  <span className="section-label">{activeTask ? 'Active Now' : 'Paused'}</span>
                   {/* Daily budget quick-set for active task */}
                   <div className="absolute top-0 right-0 flex items-center gap-1.5 px-2.5 py-1.5 glass-surface border border-notion-border rounded-xl text-xs">
                     <ClipboardClock size={12} className="text-notion-text-light shrink-0" />
@@ -77,21 +80,24 @@ export default function Dashboard() {
                       min="0"
                       step="0.5"
                       placeholder="Budget"
-                      defaultValue={activeTask.dailyBudgetMs ? activeTask.dailyBudgetMs / 3600000 : ""}
-                      key={activeTask.id}
+                      defaultValue={heroTask.dailyBudgetMs ? heroTask.dailyBudgetMs / 3600000 : ""}
+                      key={heroTask.id}
                       onBlur={(e) => {
                         const val = parseFloat(e.target.value);
-                        setTaskDailyBudget(activeTask.id, val > 0 ? Math.round(val * 3600000) : null);
+                        setTaskDailyBudget(heroTask.id, val > 0 ? Math.round(val * 3600000) : null);
                       }}
                       className="w-18 bg-transparent text-notion-text-light text-xs focus:outline-none focus:text-notion-text"
                       title="Daily time budget for this task (hours)"
                     />
                   </div>
-                  <RunningTaskCard
-                    task={activeTask}
-                    elapsed={elapsed}
-                    onStop={stopTimer}
-                  />
+                    <RunningTaskCard
+                      task={heroTask}
+                      elapsed={heroElapsed}
+                      onStop={stopTimer}
+                      onStart={startTimer}
+                      onReset={resetTaskDailyTime}
+                      isRunning={!!activeTask}
+                    />
                 </div>
                 <hr className="border-notion-border" />
               </>
@@ -105,18 +111,30 @@ export default function Dashboard() {
               />
 
               {(() => {
-                const isRecentTaskRelevant = lastTask && lastTask.id !== activeTask?.id;
-                const hasFavorites = tasks.some(t => t.isFavorite && t.id !== lastTask?.id && t.id !== activeTask?.id);
+                // Determine what to show in the "Quick Resume" area below the input
+                // 1. If a task is RUNNING: Show the 'lastTask' (Previous) + other Favorites
+                // 2. If NO task is running: Hero is 'lastTask'. Show only other Favorites.
+                
+                const showRecentButton = lastTask && lastTask.id !== activeTask?.id && !!activeTask;
+                const heroId = heroTask?.id;
+                const recentId = showRecentButton ? lastTask?.id : null;
+                
+                const favoritesToDisplay = tasks.filter(t => 
+                  t.isFavorite && 
+                  t.id !== heroId && 
+                  t.id !== recentId
+                );
 
-                if (isRecentTaskRelevant || hasFavorites) {
+                if (showRecentButton || favoritesToDisplay.length > 0) {
                   return (
                     <div className="mt-6 flex flex-wrap items-center justify-center gap-3 w-full animate-slide-up">
-                      {/* Recent Task First */}
-                      {isRecentTaskRelevant && (
+                      {/* Recent/Previous Task Button */}
+                      {showRecentButton && (
                         <button
+                          key={`recent-${lastTask.id}`}
                           onClick={() => startTimer(lastTask.id)}
                           className="flex items-center gap-2 px-4 py-2.5 glass-surface border border-notion-border rounded-xl shadow-sm hover:shadow-md hover:bg-white/80 transition-premium group/fav active:scale-95"
-                          title={lastTask.name}
+                          title={`Resume ${lastTask.name}`}
                         >
                           <Reply size={14} className="text-notion-secondary-text shrink-0" />
                           <span className="text-sm font-semibold text-notion-text max-w-[150px] truncate">{getDisplayName(lastTask.name)}</span>
@@ -125,10 +143,10 @@ export default function Dashboard() {
                         </button>
                       )}
 
-                      {/* Favorites next */}
-                      {tasks.filter(t => t.isFavorite && t.id !== lastTask?.id && t.id !== activeTask?.id).map(task => (
+                      {/* Favorites chips */}
+                      {favoritesToDisplay.map(task => (
                         <button
-                          key={task.id}
+                          key={`fav-${task.id}`}
                           onClick={() => startTimer(task.id)}
                           className="flex items-center gap-2 px-4 py-2.5 glass-surface border border-notion-border rounded-xl shadow-sm hover:shadow-md hover:bg-white/80 transition-premium group/fav active:scale-95"
                           title={task.name}
@@ -166,6 +184,7 @@ export default function Dashboard() {
               onRename={renameTask}
               onToggleFavorite={toggleFavoriteTask}
               onSetBudget={setTaskDailyBudget}
+              onResetToday={resetTaskDailyTime}
             />
           </section>
 

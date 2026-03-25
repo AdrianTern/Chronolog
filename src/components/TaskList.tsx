@@ -20,6 +20,8 @@ interface TaskListProps {
     onToggleFavorite: (id: string) => void;
     /** Callback triggered to set a per-task daily budget. */
     onSetBudget: (id: string, budgetMs: number | null) => void;
+    /** Callback triggered to reset today's time. */
+    onResetToday: (id: string) => void;
 }
 
 /**
@@ -34,6 +36,7 @@ export default function TaskList({
     onRename,
     onToggleFavorite,
     onSetBudget,
+    onResetToday,
 }: TaskListProps) {
     if (tasks.length === 0) {
         return (
@@ -72,6 +75,7 @@ export default function TaskList({
                         onRename={onRename}
                         onToggleFavorite={onToggleFavorite}
                         onSetBudget={onSetBudget}
+                        onResetToday={onResetToday}
                     />
                 </div>
             ))}

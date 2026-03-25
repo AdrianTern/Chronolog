@@ -1,7 +1,7 @@
 "use client";
 
 import { Task } from "@/types/task";
-import { Square } from "lucide-react";
+import { Square, RotateCcw, Play } from "lucide-react";
 import TimerDisplay from "./TimerDisplay";
 import { formatHms } from "@/lib/timeUtils";
 
@@ -15,6 +15,12 @@ interface RunningTaskCardProps {
     elapsed: number;
     /** Callback triggered to stop the active timer. */
     onStop: () => void;
+    /** Callback triggered to start/resume the timer. */
+    onStart: (id: string) => void;
+    /** Callback triggered to reset today's time for this task. */
+    onReset: (id: string) => void;
+    /** Whether the timer is currently running. */
+    isRunning: boolean;
 }
 
 
@@ -26,6 +32,9 @@ export default function RunningTaskCard({
     task,
     elapsed,
     onStop,
+    onStart,
+    onReset,
+    isRunning,
 }: RunningTaskCardProps) {
     const budget = task.dailyBudgetMs;
     const isOverBudget = !!budget && elapsed >= budget;
@@ -34,9 +43,9 @@ export default function RunningTaskCard({
         <div className="flex flex-col items-center justify-center py-4 gap-6 transition-all group animate-fade-in">
             <div className="text-center relative z-10">
                 <div className="flex items-center gap-2 justify-center mb-2 animate-breathe">
-                    <div className="w-1 h-1 rounded-full bg-notion-primary animate-pulse" />
+                    <div className={`w-1 h-1 rounded-full animate-pulse ${isRunning ? 'bg-notion-primary' : 'bg-notion-text-light opacity-50'}`} />
                     <span className="text-notion-text-light text-[9px] font-bold uppercase tracking-[0.2em]">
-                        Active Task
+                        {isRunning ? 'Active Task' : 'Paused Task'}
                     </span>
                 </div>
                 <h2 className="text-xl font-bold tracking-tight text-notion-text leading-tight">
@@ -65,13 +74,39 @@ export default function RunningTaskCard({
                     )}
                 </div>
 
-                <button
-                    onClick={onStop}
-                    className="btn-primary px-6 py-2 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 bg-notion-text hover:bg-black group/btn"
-                >
-                    <Square size={14} fill="currentColor" className="group-hover/btn:rotate-90 transition-transform duration-500" />
-                    <span className="uppercase text-[10px] font-bold tracking-[0.2em] text-white">Pause</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    {isRunning ? (
+                        <button
+                            onClick={onStop}
+                            className="btn-primary px-6 py-2 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 bg-notion-text hover:bg-black group/btn"
+                        >
+                            <Square size={14} fill="currentColor" className="group-hover/btn:rotate-90 transition-transform duration-500" />
+                            <span className="uppercase text-[10px] font-bold tracking-[0.2em] text-white">Pause</span>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => onStart(task.id)}
+                            className="btn-primary px-6 py-2 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 bg-notion-primary hover:bg-amber-500 group/btn border-none"
+                        >
+                            <Play size={14} fill="currentColor" className="group-hover/btn:translate-x-0.5 transition-transform" />
+                            <span className="uppercase text-[10px] font-bold tracking-[0.2em] text-white">Resume</span>
+                        </button>
+                    )
+                    }
+
+                    <button
+                        onClick={() => {
+                            if (confirm(`Reset today's progress for "${task.name}"?`)) {
+                                onReset(task.id);
+                            }
+                        }}
+                        className="btn-secondary px-6 py-2 rounded-xl border border-notion-border shadow-sm hover:shadow-md hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all active:scale-95 group/reset"
+                        title="Reset Today's Time"
+                    >
+                        <RotateCcw size={14} className="group-hover/reset:rotate-[-120deg] transition-transform duration-500" />
+                        <span className="uppercase text-[10px] font-bold tracking-[0.2em]">Reset</span>
+                    </button>
+                </div>
             </div>
         </div>
     );
