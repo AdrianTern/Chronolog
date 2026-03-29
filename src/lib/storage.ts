@@ -5,13 +5,77 @@ const STORAGE_KEY = "time-tracker-data";
 const isBrowser = typeof window !== "undefined";
 
 /**
- * Synchronous local storage operations.
- * Important: This uses localStorage which is synchronous and can block the main thread.
- * For very large datasets spanning thousands of tasks, consider migrating to IndexedDB.
+ * Asynchronous storage operations supporting both Web (localStorage) and Extension (chrome.storage).
  */
-export const loadTasks = (): Task[] => {
-    if (!isBrowser) return [];
-    const data = localStorage.getItem(STORAGE_KEY);
+
+const getStorageItem = async (key: string): Promise<string | null> => {
+    if (!isBrowser) return null;
+    
+    // Check for Chrome Extension environment
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        return new Promise((resolve) => {
+            chrome.storage.local.get([key], (result) => {
+                resolve((result[key] as string) || null);
+            });
+        });
+    }
+
+    // Fallback to localStorage
+    return Promise.resolve(localStorage.getItem(key));
+};
+
+const setStorageItem = async (key: string, value: string): Promise<void> => {
+    if (!isBrowser) return;
+
+    // Check for Chrome Extension environment
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        return new Promise((resolve) => {
+            chrome.storage.local.set({ [key]: value }, () => resolve());
+        });
+    }
+
+// Fallback to localStorage
+    localStorage.setItem(key, value);
+    
+    // Seamless Mirror Sync: Broadcast to the extension if available
+    broadcastToExtension(key, value);
+    
+    return Promise.resolve();
+};
+
+/**
+ * Pushes data to the Content Script (if the Chrome Extension is injected).
+ */
+const broadcastToExtension = (key: string, value: string) => {
+    if (!isBrowser) return;
+    try {
+        window.postMessage({ type: "CHRONOLOG_SYNC_OUT", key, value }, "*");
+    } catch (e) {
+        // Silently fail if postMessage throws
+    }
+};
+
+const removeStorageItem = async (key: string): Promise<void> => {
+    if (!isBrowser) return;
+
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        return new Promise((resolve) => {
+            chrome.storage.local.remove([key], () => resolve());
+        });
+    }
+
+    localStorage.removeItem(key);
+    
+    // Broadcast removal to the extension
+    try {
+        window.postMessage({ type: "CHRONOLOG_SYNC_OUT", key, value: null }, "*");
+    } catch (e) {}
+    
+    return Promise.resolve();
+}
+
+export const loadTasks = async (): Promise<Task[]> => {
+    const data = await getStorageItem(STORAGE_KEY);
     if (!data) return [];
     try {
         const parsed = JSON.parse(data) as AppData;
@@ -22,41 +86,40 @@ export const loadTasks = (): Task[] => {
     }
 };
 
-export const saveTasks = (tasks: Task[]) => {
-    if (!isBrowser) return;
+export const saveTasks = async (tasks: Task[]): Promise<void> => {
     const data: AppData = { tasks };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    await setStorageItem(STORAGE_KEY, JSON.stringify(data));
 };
 
-export const getFirstAccessDate = (): number => {
+export const getFirstAccessDate = async (): Promise<number> => {
     if (!isBrowser) return Date.now();
     const key = "chronolog-first-access";
-    const existing = localStorage.getItem(key);
+    const existing = await getStorageItem(key);
     if (existing) return parseInt(existing);
 
     const now = Date.now();
-    localStorage.setItem(key, now.toString());
+    await setStorageItem(key, now.toString());
     return now;
 };
 
-export const addTask = (task: Task) => {
-    const tasks = loadTasks();
-    saveTasks([...tasks, task]);
+export const addTask = async (task: Task): Promise<void> => {
+    const tasks = await loadTasks();
+    await saveTasks([...tasks, task]);
 };
 
-export const updateTask = (updatedTask: Task) => {
-    const tasks = loadTasks();
-    saveTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+export const updateTask = async (updatedTask: Task): Promise<void> => {
+    const tasks = await loadTasks();
+    await saveTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
 };
 
-export const deleteTask = (taskId: string) => {
-    const tasks = loadTasks();
-    saveTasks(tasks.filter((t) => t.id !== taskId));
+export const deleteTask = async (taskId: string): Promise<void> => {
+    const tasks = await loadTasks();
+    await saveTasks(tasks.filter((t) => t.id !== taskId));
 };
 
-export const getPendingAutoPause = (): { taskId: string; sessionId: string; pauseAt: number } | null => {
+export const getPendingAutoPause = async (): Promise<{ taskId: string; sessionId: string; pauseAt: number } | null> => {
     if (!isBrowser) return null;
-    const data = localStorage.getItem("chronolog-pending-autopause");
+    const data = await getStorageItem("chronolog-pending-autopause");
     if (!data) return null;
     try {
         return JSON.parse(data);
@@ -65,39 +128,39 @@ export const getPendingAutoPause = (): { taskId: string; sessionId: string; paus
     }
 };
 
-export const setPendingAutoPause = (data: { taskId: string; sessionId: string; pauseAt: number }) => {
+export const setPendingAutoPause = async (data: { taskId: string; sessionId: string; pauseAt: number }): Promise<void> => {
     if (!isBrowser) return;
-    localStorage.setItem("chronolog-pending-autopause", JSON.stringify(data));
+    await setStorageItem("chronolog-pending-autopause", JSON.stringify(data));
 };
 
-export const clearPendingAutoPause = () => {
+export const clearPendingAutoPause = async (): Promise<void> => {
     if (!isBrowser) return;
-    localStorage.removeItem("chronolog-pending-autopause");
+    await removeStorageItem("chronolog-pending-autopause");
 };
 
 /** Get the global reminder interval in ms. null = disabled. */
-export const getGlobalReminderInterval = (): number | null => {
+export const getGlobalReminderInterval = async (): Promise<number | null> => {
     if (!isBrowser) return null;
-    const raw = localStorage.getItem("chronolog-global-reminder");
+    const raw = await getStorageItem("chronolog-global-reminder");
     if (raw === null) return null;
     const parsed = parseInt(raw);
     return isNaN(parsed) || parsed === 0 ? null : parsed;
 };
 
 /** Set the global reminder interval in ms. Pass null to disable. */
-export const setGlobalReminderInterval = (ms: number | null) => {
+export const setGlobalReminderInterval = async (ms: number | null): Promise<void> => {
     if (!isBrowser) return;
     if (ms === null) {
-        localStorage.removeItem("chronolog-global-reminder");
+        await removeStorageItem("chronolog-global-reminder");
     } else {
-        localStorage.setItem("chronolog-global-reminder", ms.toString());
+        await setStorageItem("chronolog-global-reminder", ms.toString());
     }
 };
 
 /** Get the daily goal in ms. Defaults to 8h (28,800,000 ms) if not set. */
-export const getDailyGoal = (): number => {
+export const getDailyGoal = async (): Promise<number> => {
     if (!isBrowser) return 8 * 3600000;
-    const raw = localStorage.getItem("chronolog-daily-goal");
+    const raw = await getStorageItem("chronolog-daily-goal");
     if (raw === null) return 8 * 3600000;
     const parsed = parseInt(raw);
     const goal = isNaN(parsed) || parsed <= 0 ? 8 * 3600000 : parsed;
@@ -105,21 +168,21 @@ export const getDailyGoal = (): number => {
 };
 
 /** Set the daily goal in ms. */
-export const setDailyGoal = (ms: number) => {
+export const setDailyGoal = async (ms: number): Promise<void> => {
     if (!isBrowser) return;
-    localStorage.setItem("chronolog-daily-goal", ms.toString());
+    await setStorageItem("chronolog-daily-goal", ms.toString());
 };
 
 /** Check if daily goal is enabled. Defaults to false. */
-export const isDailyGoalEnabled = (): boolean => {
+export const isDailyGoalEnabled = async (): Promise<boolean> => {
     if (!isBrowser) return false;
-    return localStorage.getItem("chronolog-daily-goal-enabled") === "true";
+    return await getStorageItem("chronolog-daily-goal-enabled") === "true";
 };
 
 /** Set if daily goal is enabled. */
-export const setDailyGoalEnabled = (enabled: boolean) => {
+export const setDailyGoalEnabled = async (enabled: boolean): Promise<void> => {
     if (!isBrowser) return;
-    localStorage.setItem("chronolog-daily-goal-enabled", enabled.toString());
+    await setStorageItem("chronolog-daily-goal-enabled", enabled.toString());
 };
 
 const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -141,9 +204,9 @@ const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 };
 
 /** Get global notification settings. */
-export const getNotificationSettings = (): NotificationSettings => {
+export const getNotificationSettings = async (): Promise<NotificationSettings> => {
     if (!isBrowser) return DEFAULT_NOTIFICATION_SETTINGS;
-    const raw = localStorage.getItem("chronolog-notification-settings");
+    const raw = await getStorageItem("chronolog-notification-settings");
     if (!raw) return DEFAULT_NOTIFICATION_SETTINGS;
     try {
         return { ...DEFAULT_NOTIFICATION_SETTINGS, ...JSON.parse(raw) };
@@ -153,8 +216,8 @@ export const getNotificationSettings = (): NotificationSettings => {
 };
 
 /** Save global notification settings. */
-export const saveNotificationSettings = (settings: NotificationSettings) => {
+export const saveNotificationSettings = async (settings: NotificationSettings): Promise<void> => {
     if (!isBrowser) return;
-    localStorage.setItem("chronolog-notification-settings", JSON.stringify(settings));
+    await setStorageItem("chronolog-notification-settings", JSON.stringify(settings));
 };
 

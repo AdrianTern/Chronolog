@@ -4,69 +4,110 @@ import * as storage from "@/lib/storage";
 
 export const useTasks = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [isHydrating, setIsHydrating] = useState(true);
+
+    const refreshTasks = useCallback(async () => {
+        const loadedTasks = await storage.loadTasks();
+        setTasks(loadedTasks);
+    }, []);
 
     useEffect(() => {
-        setTasks(storage.loadTasks());
-    }, []);
+        const initialize = async () => {
+            await refreshTasks();
+            setIsHydrating(false);
+        };
+        initialize();
 
-    const refreshTasks = useCallback(() => {
-        setTasks(storage.loadTasks());
-    }, []);
+        // --- Mirror Sync Listeners ---
 
-    const addTask = useCallback((name: string) => {
+        // Listen for Storage Events (Between multiple Web Tabs, or injected from content.js)
+        const handleStorage = (e: StorageEvent | Event) => {
+            // e could be a StorageEvent (from other tabs) or a custom Event (from content.js)
+            // If it's a native StorageEvent, check the key to prevent over-rendering
+            if (e instanceof StorageEvent) {
+                if (e.key && !e.key.includes("chronolog") && e.key !== "time-tracker-data") {
+                    return; // Ignore irrelevant keys
+                }
+            }
+            refreshTasks();
+        };
+        
+        window.addEventListener("storage", handleStorage);
+
+        // Listen for chrome.storage changes (When running inside the Extension Popup)
+        if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+            const handleExtStorage = (changes: any, area: string) => {
+                if (area === "local") {
+                    refreshTasks();
+                }
+            };
+            chrome.storage.onChanged.addListener(handleExtStorage);
+            
+            return () => {
+                window.removeEventListener("storage", handleStorage);
+                chrome.storage.onChanged.removeListener(handleExtStorage);
+            };
+        }
+
+        return () => {
+            window.removeEventListener("storage", handleStorage);
+        };
+    }, [refreshTasks]);
+
+    const addTask = useCallback(async (name: string) => {
         const newTask: Task = {
             id: crypto.randomUUID(),
             name,
             createdAt: Date.now(),
             sessions: [],
         };
-        storage.addTask(newTask);
-        refreshTasks();
+        await storage.addTask(newTask);
+        await refreshTasks();
         return newTask;
     }, [refreshTasks]);
 
-    const updateTask = useCallback((task: Task) => {
-        storage.updateTask(task);
-        refreshTasks();
+    const updateTask = useCallback(async (task: Task) => {
+        await storage.updateTask(task);
+        await refreshTasks();
     }, [refreshTasks]);
 
-    const deleteTask = useCallback((taskId: string) => {
-        storage.deleteTask(taskId);
-        refreshTasks();
+    const deleteTask = useCallback(async (taskId: string) => {
+        await storage.deleteTask(taskId);
+        await refreshTasks();
     }, [refreshTasks]);
 
-    const renameTask = useCallback((taskId: string, newName: string) => {
-        const allTasks = storage.loadTasks();
+    const renameTask = useCallback(async (taskId: string, newName: string) => {
+        const allTasks = await storage.loadTasks();
         const task = allTasks.find((t) => t.id === taskId);
         if (task) {
             task.name = newName;
-            storage.updateTask(task);
-            refreshTasks();
+            await storage.updateTask(task);
+            await refreshTasks();
         }
     }, [refreshTasks]);
 
-    const toggleFavoriteTask = useCallback((taskId: string) => {
-        const allTasks = storage.loadTasks();
+    const toggleFavoriteTask = useCallback(async (taskId: string) => {
+        const allTasks = await storage.loadTasks();
         const task = allTasks.find((t) => t.id === taskId);
         if (task) {
             task.isFavorite = !task.isFavorite;
-            storage.updateTask(task);
-            refreshTasks();
+            await storage.updateTask(task);
+            await refreshTasks();
         }
     }, [refreshTasks]);
 
-    const setTaskDailyBudget = useCallback((taskId: string, budgetMs: number | null) => {
-        const allTasks = storage.loadTasks();
+    const setTaskDailyBudget = useCallback(async (taskId: string, budgetMs: number | null) => {
+        const allTasks = await storage.loadTasks();
         const task = allTasks.find((t) => t.id === taskId);
         if (task) {
             task.dailyBudgetMs = budgetMs;
-            storage.updateTask(task);
-            refreshTasks();
+            await storage.updateTask(task);
+            await refreshTasks();
         }
     }, [refreshTasks]);
 
-    const resetTaskDailyTime = useCallback((taskId: string) => {
-        const allTasks = storage.loadTasks();
+    const resetTaskDailyTime = useCallback(async (taskId: string) => {
+        const allTasks = await storage.loadTasks();
         const task = allTasks.find((t) => t.id === taskId);
         if (!task) return;
 
@@ -90,12 +131,13 @@ export const useTasks = () => {
                 });
         });
 
-        storage.saveTasks(allTasks);
-        refreshTasks();
+        await storage.saveTasks(allTasks);
+        await refreshTasks();
     }, [refreshTasks]);
 
     return {
         tasks,
+        isHydrating,
         addTask,
         updateTask,
         deleteTask,

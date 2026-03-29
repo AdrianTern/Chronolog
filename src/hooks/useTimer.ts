@@ -91,7 +91,7 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
                     idleWarningSentRef.current = false;
                 }
 
-                const updateElapsed = () => {
+                const updateElapsed = async () => {
                     const currentStartOfToday = new Date().setHours(0, 0, 0, 0);
                     
                     // Recalculate if we crossed midnight while the timer is running
@@ -127,7 +127,7 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
                     }
 
                     // --- Notifications Logic ---
-                    const settings = storage.getNotificationSettings();
+                    const settings = await storage.getNotificationSettings();
                     if (settings.enabled) {
                         // 1. Break Reminders
                         if (settings.breakReminder.enabled) {
@@ -175,10 +175,10 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
     }, [activeTaskId, activeSessionId, tasks]);
 
 
-    const stopTimer = useCallback(() => {
+    const stopTimer = useCallback(async () => {
         if (!activeTaskId || !activeSessionId) return;
 
-        const allTasks = storage.loadTasks();
+        const allTasks = await storage.loadTasks();
         const taskIdx = allTasks.findIndex((t) => t.id === activeTaskId);
         if (taskIdx === -1) return;
 
@@ -188,7 +188,7 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
         if (sessionIdx === -1) return;
 
         allTasks[taskIdx].sessions[sessionIdx].endTime = Date.now();
-        storage.saveTasks(allTasks);
+        await storage.saveTasks(allTasks);
 
         setActiveTaskId(null);
         setActiveSessionId(null);
@@ -196,14 +196,14 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
         refreshTasks();
     }, [activeTaskId, activeSessionId, refreshTasks]);
 
-    const startTimer = useCallback((taskId: string) => {
+    const startTimer = useCallback(async (taskId: string) => {
         // 1. Stop current if any
         if (activeTaskId) {
-            stopTimer();
+            await stopTimer();
         }
 
         // 2. Start new
-        const allTasks = storage.loadTasks();
+        const allTasks = await storage.loadTasks();
         const taskIdx = allTasks.findIndex((t) => t.id === taskId);
         if (taskIdx === -1) return;
 
@@ -214,7 +214,7 @@ export const useTimer = (tasks: Task[], refreshTasks: () => void) => {
         };
 
         allTasks[taskIdx].sessions.push(newSession);
-        storage.saveTasks(allTasks);
+        await storage.saveTasks(allTasks);
 
         setActiveTaskId(taskId);
         setActiveSessionId(newSession.id);

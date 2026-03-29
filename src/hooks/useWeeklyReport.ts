@@ -10,7 +10,12 @@ export const useWeeklyReport = (tasks: Task[], includeZero: boolean = false) => 
     const [currentWeek, setCurrentWeek] = useState(new Date());
     const [ticker, setTicker] = useState(0);
 
-    const firstAccessDate = useMemo(() => storage.getFirstAccessDate(), []);
+    const [firstAccessDate, setFirstAccessDate] = useState<number>(Date.now());
+
+    useEffect(() => {
+        storage.getFirstAccessDate().then(setFirstAccessDate);
+    }, []);
+
     const firstWeekStart = startOfWeek(new Date(firstAccessDate), { weekStartsOn: 1 });
 
     const report = useMemo(() => {

@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Chronolog - Time Tracker",
+  "version": "1.0.0",
+  "description": "A beautiful, local-first time tracker with native background notifications.",
+  "action": {
+    "default_popup": "extension.html",
+    "default_title": "Open Chronolog"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "tabs"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["http://localhost/*", "https://chronolog.app/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "host_permissions": [],
+  "icons": {
+    "16": "favicon.ico",
+    "48": "favicon.ico",
+    "128": "favicon.ico"
+  }
+}

@@ -18,19 +18,23 @@ import SettingsDrawer from "@/components/SettingsDrawer";
 import Image from "next/image";
 
 export default function Dashboard() {
-  const { tasks, addTask, deleteTask, renameTask, toggleFavoriteTask, setTaskDailyBudget, resetTaskDailyTime, refreshTasks } = useTasks();
+  const { tasks, isHydrating, addTask, deleteTask, renameTask, toggleFavoriteTask, setTaskDailyBudget, resetTaskDailyTime, refreshTasks } = useTasks();
   const { activeTask, lastTask, elapsed, startTimer, stopTimer } = useTimer(
     tasks,
     refreshTasks
   );
 
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  if (isHydrating) {
+    return null;
+  }
+
   const heroTask = activeTask || lastTask;
   const heroElapsed = activeTask ? elapsed : (heroTask ? calculateDailyTotal(heroTask) : 0);
 
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  const handleAddTask = (name: string) => {
-    const newTask = addTask(name);
+  const handleAddTask = async (name: string) => {
+    const newTask = await addTask(name);
     if (newTask) {
       startTimer(newTask.id);
     }
@@ -72,32 +76,18 @@ export default function Dashboard() {
               <>
                 <div className="relative">
                   <span className="section-label">{activeTask ? 'Active Now' : 'Paused'}</span>
-                  {/* Daily budget quick-set for active task */}
-                  <div className="absolute top-0 right-0 flex items-center gap-1.5 px-2.5 py-1.5 glass-surface border border-notion-border rounded-xl text-xs">
-                    <ClipboardClock size={12} className="text-notion-text-light shrink-0" />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      placeholder="Budget"
-                      defaultValue={heroTask.dailyBudgetMs ? heroTask.dailyBudgetMs / 3600000 : ""}
-                      key={heroTask.id}
-                      onBlur={(e) => {
-                        const val = parseFloat(e.target.value);
-                        setTaskDailyBudget(heroTask.id, val > 0 ? Math.round(val * 3600000) : null);
-                      }}
-                      className="w-18 bg-transparent text-notion-text-light text-xs focus:outline-none focus:text-notion-text"
-                      title="Daily time budget for this task (hours)"
-                    />
-                  </div>
+                  <div className="relative pt-2">
                     <RunningTaskCard
+                      key={heroTask.id}
                       task={heroTask}
                       elapsed={heroElapsed}
                       onStop={stopTimer}
                       onStart={startTimer}
                       onReset={resetTaskDailyTime}
                       isRunning={!!activeTask}
+                      onBudgetChange={setTaskDailyBudget}
                     />
+                  </div>
                 </div>
                 <hr className="border-notion-border" />
               </>
@@ -194,6 +184,11 @@ export default function Dashboard() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />
+      <footer className="mt-20 py-10 text-center">
+        <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-notion-text-light opacity-40">
+          Crafted with Precision • 2026
+        </p>
+      </footer>
     </>
   );
 }

@@ -163,7 +163,7 @@ const TaskMultiSearch = ({ tags, setTags, availableTasks }: { tags: string[], se
 };
 
 export default function ReportsPage() {
-    const { tasks } = useTasks();
+    const { tasks, isHydrating } = useTasks();
     const [hideSubtasks, setHideSubtasks] = useState(false);
     const [searchTags, setSearchTags] = useState<string[]>([]);
 
@@ -227,6 +227,11 @@ export default function ReportsPage() {
     const handleExport = () => {
         exportWeeklyReportToCSV(report, currentWeek, weekNumber);
     };
+
+    if (isHydrating) {
+        // Return a sleek empty state or null while hydrating from storage
+        return <div className="min-h-screen bg-notion-bg animate-pulse flex items-center justify-center"><div className="w-8 h-8 rounded-full border-2 border-notion-primary border-t-transparent animate-spin"></div></div>;
+    }
 
     return (
         <main className="max-w-full mx-auto px-8 xl:px-16 py-8">

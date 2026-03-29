@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import { Task } from "@/types/task";
 import { Square, RotateCcw, Play } from "lucide-react";
 import TimerDisplay from "./TimerDisplay";
@@ -21,13 +22,10 @@ interface RunningTaskCardProps {
     onReset: (id: string) => void;
     /** Whether the timer is currently running. */
     isRunning: boolean;
+    /** Callback to update the task's daily budget. */
+    onBudgetChange?: (taskId: string, budgetMs: number | null) => void;
 }
 
-
-/**
- * Hero card displayed at the top of the dashboard when a task is active.
- * Shows the task name, a live breathing indicator, and the active timer.
- */
 export default function RunningTaskCard({
     task,
     elapsed,
@@ -35,9 +33,24 @@ export default function RunningTaskCard({
     onStart,
     onReset,
     isRunning,
+    onBudgetChange,
 }: RunningTaskCardProps) {
+    const [isEditingBudget, setIsEditingBudget] = React.useState(false);
+    const [tempBudget, setTempBudget] = React.useState(task.dailyBudgetMs ? (task.dailyBudgetMs / 3600000).toString() : "");
+
     const budget = task.dailyBudgetMs;
     const isOverBudget = !!budget && elapsed >= budget;
+
+    const handleBudgetSubmit = () => {
+        if (!onBudgetChange) return;
+        const val = parseFloat(tempBudget);
+        if (isNaN(val) || val <= 0) {
+            onBudgetChange(task.id, null);
+        } else {
+            onBudgetChange(task.id, Math.round(val * 3600000));
+        }
+        setIsEditingBudget(false);
+    };
 
     return (
         <div className="flex flex-col items-center justify-center py-4 gap-6 transition-all group animate-fade-in">
@@ -57,19 +70,40 @@ export default function RunningTaskCard({
                 <div className="relative flex flex-col items-center gap-1">
                     <TimerDisplay
                         elapsed={elapsed}
-                        className={`text-4xl font-bold tracking-tighter tabular-nums transition-colors duration-500 ${
-                            isOverBudget ? "text-red-500" : "text-notion-text"
-                        }`}
+                        className={`text-4xl font-bold tracking-tighter tabular-nums transition-colors duration-500 ${isOverBudget ? "text-red-500" : isRunning ? "text-notion-text" : "text-notion-text-light"
+                            }`}
                         style={{ textShadow: isOverBudget ? "0 0 20px rgba(239,68,68,0.25)" : "0 0 20px rgba(251,191,36,0.15)" }}
                     />
-                    {budget && (
-                        <div 
-                            className={`text-[11px] font-mono font-semibold tabular-nums transition-colors duration-500 p-1 px-2 rounded-lg ${
-                                isOverBudget ? "text-red-400 bg-red-50/50" : "text-notion-text-light bg-black/5"
-                            }`}
-                            title="Daily budget progress (Today's total / Budget)"
+
+                    {isEditingBudget ? (
+                        <div className="flex items-center gap-1 animate-in zoom-in-95 duration-200">
+                            <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                value={tempBudget}
+                                autoFocus
+                                onBlur={handleBudgetSubmit}
+                                onKeyDown={(e) => e.key === 'Enter' && handleBudgetSubmit()}
+                                onChange={(e) => setTempBudget(e.target.value)}
+                                className="w-16 bg-white/50 border border-notion-primary/30 rounded px-1 text-[11px] font-mono font-bold text-center focus:outline-none focus:ring-1 focus:ring-notion-primary"
+                            />
+                            <span className="text-[9px] font-bold text-notion-text-light uppercase tracking-wider">Hrs</span>
+                        </div>
+                    ) : (
+                        <div
+                            onClick={() => onBudgetChange && setIsEditingBudget(true)}
+                            className={`text-[11px] font-mono font-semibold tabular-nums transition-all duration-500 p-1 px-2 rounded-lg flex items-center gap-1.5 ${isOverBudget
+                                    ? "text-red-400 bg-red-50/50"
+                                    : "text-notion-text-light bg-black/5"
+                                } ${onBudgetChange ? "cursor-pointer hover:scale-105 active:scale-95 hover:bg-black/10" : ""}`}
+                            title="Daily budget (Click to edit)"
                         >
-                            {formatHms(elapsed)} / {formatHms(budget)}
+                            {budget ? (
+                                <span>{formatHms(elapsed)} / {formatHms(budget)}</span>
+                            ) : (
+                                <span className="text-[9px] uppercase tracking-wider opacity-60">+ Set Budget</span>
+                            )}
                         </div>
                     )}
                 </div>

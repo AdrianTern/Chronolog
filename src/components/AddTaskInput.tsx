@@ -13,9 +13,11 @@ interface AddTaskInputProps {
     tasks: Task[];
     /** ID of the currently active task so it is excluded from suggestions. */
     activeTaskId: string | null;
+    /** Whether to use a compact style suitable for the 400px extension popup. */
+    compact?: boolean;
 }
 
-export default function AddTaskInput({ onAdd, onResume, tasks, activeTaskId }: AddTaskInputProps) {
+export default function AddTaskInput({ onAdd, onResume, tasks, activeTaskId, compact = false }: AddTaskInputProps) {
     const [name, setName] = useState("");
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [highlighted, setHighlighted] = useState(-1);
@@ -127,10 +129,14 @@ export default function AddTaskInput({ onAdd, onResume, tasks, activeTaskId }: A
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
                     onFocus={() => setShowSuggestions(true)}
-                    placeholder={activeTaskId ? "Start or switch to another task..." : "What are you working on next?"}
-                    className={`w-full pl-5 pr-[110px] py-4 bg-white/80 backdrop-blur-3xl border border-notion-border transition-all text-base font-semibold placeholder:text-notion-text-light/60 text-notion-text focus:outline-none focus:ring-2 focus:ring-notion-primary/10 ${
-                        showSuggestions && suggestions.length > 0 ? "rounded-t-2xl border-b-notion-border/30" : "rounded-2xl shadow-lg"
-                    }`}
+                    placeholder={compact
+                        ? (activeTaskId ? "Switch task..." : "Start a task...")
+                        : (activeTaskId ? "Start or switch to another task..." : "What are you working on next?")
+                    }
+                    className={`w-full pl-4 pr-[90px] bg-white/80 backdrop-blur-3xl border border-notion-border transition-all font-semibold placeholder:text-notion-text-light/60 text-notion-text focus:outline-none focus:ring-2 focus:ring-notion-primary/10
+                        ${compact ? "py-2.5 text-sm" : "py-4 text-base"}
+                        ${showSuggestions && suggestions.length > 0 ? "rounded-t-2xl border-b-notion-border/30" : "rounded-2xl shadow-lg"}
+                    `}
                     autoComplete="off"
                 />
                 

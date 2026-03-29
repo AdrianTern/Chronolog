@@ -14,10 +14,22 @@ interface SettingsDrawerProps {
 export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
     const [settings, setSettings] = useState<NotificationSettings | null>(null);
     const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>("default");
+    const [dailyGoal, setDailyGoal] = useState<number>(8); // Hours
+    const [isDailyGoalEnabled, setIsDailyGoalEnabled] = useState<boolean>(true);
 
     useEffect(() => {
-        setSettings(storage.getNotificationSettings());
-        setPermissionStatus(getNotificationPermission());
+        if (isOpen) {
+            storage.getNotificationSettings().then(setSettings);
+            setPermissionStatus(getNotificationPermission());
+            
+            // Load Daily Goal settings
+            storage.getDailyGoal().then(ms => {
+                setDailyGoal(ms / 3600000);
+            });
+            storage.isDailyGoalEnabled().then(enabled => {
+                setIsDailyGoalEnabled(enabled);
+            });
+        }
     }, [isOpen]);
 
     const handleToggleEnabled = async () => {
@@ -33,14 +45,14 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
 
         const newSettings = { ...settings, enabled: newEnabled };
         setSettings(newSettings);
-        storage.saveNotificationSettings(newSettings);
+        await storage.saveNotificationSettings(newSettings);
     };
 
-    const updateSetting = (updater: (prev: NotificationSettings) => NotificationSettings) => {
+    const updateSetting = async (updater: (prev: NotificationSettings) => NotificationSettings) => {
         if (!settings) return;
         const newSettings = updater(settings);
         setSettings(newSettings);
-        storage.saveNotificationSettings(newSettings);
+        await storage.saveNotificationSettings(newSettings);
     };
 
     if (!isOpen || !settings) return null;
@@ -207,8 +219,10 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                                 Get notified when you reach 25%, 50%, 75%, and 100% of your daily time goal.
                             </p>
                         </div>
+
                     </div>
                 </div>
+
 
                 {/* Footer Tip */}
                 <div className="p-4 bg-black/5 flex gap-3 text-notion-secondary-text border-t border-notion-border">
