@@ -14,21 +14,14 @@ interface SettingsDrawerProps {
 export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps) {
     const [settings, setSettings] = useState<NotificationSettings | null>(null);
     const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>("default");
-    const [dailyGoal, setDailyGoal] = useState<number>(8); // Hours
-    const [isDailyGoalEnabled, setIsDailyGoalEnabled] = useState<boolean>(true);
+    // Detect extension context to show accurate footer hint
+    const isExtension = typeof window !== "undefined" && typeof (window as unknown as Record<string, unknown>).chrome !== "undefined"
+        && !!(window as unknown as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
 
     useEffect(() => {
         if (isOpen) {
             storage.getNotificationSettings().then(setSettings);
             setPermissionStatus(getNotificationPermission());
-            
-            // Load Daily Goal settings
-            storage.getDailyGoal().then(ms => {
-                setDailyGoal(ms / 3600000);
-            });
-            storage.isDailyGoalEnabled().then(enabled => {
-                setIsDailyGoalEnabled(enabled);
-            });
         }
     }, [isOpen]);
 
@@ -228,7 +221,9 @@ export default function SettingsDrawer({ isOpen, onClose }: SettingsDrawerProps)
                 <div className="p-4 bg-black/5 flex gap-3 text-notion-secondary-text border-t border-notion-border">
                     <Info size={14} className="shrink-0 mt-0.5" />
                     <p className="text-[10px] leading-relaxed">
-                        Notifications only work when your browser is open. Make sure to keep this tab active or pinned!
+                        {isExtension
+                            ? "The extension fires notifications in the background — even when the dashboard tab is closed."
+                            : "Notifications only work while your browser is open. Keep this tab active or pinned for reliable alerts!"}
                     </p>
                 </div>
             </div>

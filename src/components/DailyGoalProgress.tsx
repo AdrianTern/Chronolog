@@ -19,11 +19,11 @@ export default function DailyGoalProgress({ tasks, activeTaskId, elapsed, minima
     const [goalHours, setGoalHours] = useState(8);
     const [totalDailyMs, setTotalDailyMs] = useState(0);
 
-    const milestonesSentRef = useRef<Set<number>>(new Set());
-    const lastMilestoneResetDate = useRef<string>(new Date().toDateString());
-
     const [isLoading, setIsLoading] = useState(true);
     const [isEditingGoal, setIsEditingGoal] = useState(false);
+
+    const milestonesSentRef = useRef<Set<number>>(new Set());
+    const lastMilestoneResetDate = useRef<string>(new Date().toDateString());
 
     // Load settings on mount
     useEffect(() => {
@@ -50,21 +50,15 @@ export default function DailyGoalProgress({ tasks, activeTaskId, elapsed, minima
         return () => window.removeEventListener("storage", handleStorage);
     }, []);
 
-    // Calculate total daily time
+    // Calculate total daily time and process milestone notifications
+    // Note: sendNotification safely drops duplicates if the extension is active.
     useEffect(() => {
-        // Sum up all tasks' daily totals
-        // Our calculateDailyTotal already includes the active session if we pass Date.now() effectively
-        // However, useTimer provides 'elapsed' for the active task which is more real-time.
-        // Let's sum all OTHER tasks' daily totals and add the active task's 'elapsed'.
-        
         const otherTasksTotal = tasks
             .filter(t => t.id !== activeTaskId)
             .reduce((acc, t) => acc + calculateDailyTotal(t), 0);
-        
-        
         setTotalDailyMs(otherTasksTotal + (activeTaskId ? elapsed : 0));
 
-        // --- Milestone Notifications ---
+        // --- Web Fallback Milestone Notifications ---
         const checkMilestones = async () => {
             const settings = await storage.getNotificationSettings();
             if (settings.enabled && settings.dailyGoalMilestones.enabled && isEnabled) {
@@ -94,7 +88,7 @@ export default function DailyGoalProgress({ tasks, activeTaskId, elapsed, minima
             }
         };
         checkMilestones();
-    }, [tasks, activeTaskId, elapsed, isEnabled, goalHours]);
+    }, [tasks, activeTaskId, elapsed, isEnabled, goalHours, totalDailyMs]);
 
     const handleToggle = async () => {
         const newEnabled = !isEnabled;

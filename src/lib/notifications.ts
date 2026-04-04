@@ -53,11 +53,31 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
     }
 };
 
+let hasWarnedDefaultPermission = false;
+
 /**
  * Sends a desktop notification.
  */
 export const sendNotification = (title: string, options?: NotificationOptions) => {
-    if (!isNotificationSupported() || Notification.permission !== "granted" || !areNotificationsEnabled()) {
+    if (!isNotificationSupported() || !areNotificationsEnabled()) {
+        return;
+    }
+
+    // Prevent double-firing: If the extension content script is active, 
+    // it means the background service worker handles all notifications.
+    if (isBrowser && sessionStorage.getItem("chronolog-extension-active") === "true") {
+        return;
+    }
+
+    if (Notification.permission === "default") {
+        if (!hasWarnedDefaultPermission) {
+            console.warn("Chronolog: Notifications are enabled but browser permission is 'default'. Please toggle notifications in Settings to prompt the permission dialog.");
+            hasWarnedDefaultPermission = true;
+        }
+        return;
+    }
+
+    if (Notification.permission !== "granted") {
         return;
     }
 

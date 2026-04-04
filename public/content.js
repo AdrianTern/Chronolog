@@ -16,6 +16,10 @@ const STORAGE_KEYS = [
 //    Pulls the latest state from chrome.storage.local into localStorage so
 //    the website always opens with the most up-to-date data from the extension.
 // =============================================================================
+// Flag the page that the extension is active so the web app can disable its own
+// redundant notification timers to prevent double-firing.
+sessionStorage.setItem("chronolog-extension-active", "true");
+
 chrome.storage.local.get(null, (allItems) => {
     let appliedChanges = false;
 

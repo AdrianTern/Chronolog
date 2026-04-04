@@ -7,7 +7,7 @@ const SETTINGS_KEY = "chronolog-notification-settings";
 const DAILY_GOAL_KEY = "chronolog-daily-goal";
 const DAILY_GOAL_ENABLED_KEY = "chronolog-daily-goal-enabled";
 
-// In-memory state for debounce/tracking
+// In-memory state for debounce/tracking (restored from storage on each tick)
 let lastSentBudget = {};
 let lastBreakInterval = {};
 let idleSent = {};
@@ -57,7 +57,8 @@ function calculateDailyRollup(task, allTasks, currentStartOfToday) {
 }
 
 async function checkTimers() {
-    const data = await getLocalData([STORAGE_KEY, SETTINGS_KEY, DAILY_GOAL_KEY, DAILY_GOAL_ENABLED_KEY]);
+    const data = await getLocalData([STORAGE_KEY, SETTINGS_KEY, DAILY_GOAL_KEY, DAILY_GOAL_ENABLED_KEY, 'chronolog-milestones-sent']);
+
     
     let appData;
     try {
@@ -82,10 +83,18 @@ async function checkTimers() {
 
     let totalDailyMsAllTasks = 0;
 
-    // Reset daily trackers if necessary
-    if (milestonesSent.date !== todayStr) {
+    // --- Restore persisted milestone state from storage (survives service worker restarts) ---
+    const storedMilestones = data['chronolog-milestones-sent'];
+    if (storedMilestones && storedMilestones.date === todayStr) {
+        milestonesSent = { date: todayStr, sent: new Set(storedMilestones.sent) };
+    } else {
         milestonesSent = { date: todayStr, sent: new Set() };
-        lastSentBudget = {};
+    }
+
+    // Reset daily per-task trackers if the date has rolled over
+    if (lastSentBudget._date !== todayStr) {
+        lastSentBudget = { _date: todayStr };
+        idleSent = {}; // Fix: idleSent must also reset on day change
     }
 
     // Find running tasks
@@ -114,17 +123,19 @@ async function checkTimers() {
             }
         }
 
-        // 2. Break Reminder
+        // 2. Break Reminder — tracks continuous session time, not daily total
+        // Using sessionElapsed prevents false-positives after the user returns from a break.
         if (settings.breakReminder.enabled) {
-            const bThreshold = settings.breakReminder.thresholdMs;
-            const currentBInterval = Math.floor(elapsed / bThreshold);
+            const bThreshold = Math.max(settings.breakReminder.thresholdMs, 1800000); // min 30 min
+            const currentBInterval = Math.floor(sessionElapsed / bThreshold);
             if (currentBInterval > 0 && lastBreakInterval[task.id] !== currentBInterval) {
                 lastBreakInterval[task.id] = currentBInterval;
+                const hoursRunning = Math.round(sessionElapsed / 3600000 * 10) / 10;
                 chrome.notifications.create(`break-${task.id}-${currentBInterval}`, {
                     type: "basic",
                     iconUrl: "favicon.ico",
-                    title: `☕ Take a break: ${task.name}`,
-                    message: `You've been tracking time for '${task.name}' for a while. Time for a quick break?`
+                    title: `☕ Time for a break: ${task.name}`,
+                    message: `You've been continuously tracking '${task.name}' for ${hoursRunning}h. Consider stepping away!`
                 });
             }
         }
@@ -153,6 +164,10 @@ async function checkTimers() {
         for (const m of milestones) {
             if (currentPercent >= m && !milestonesSent.sent.has(m)) {
                 milestonesSent.sent.add(m);
+                // Persist to storage so milestone state survives service worker restarts
+                chrome.storage.local.set({
+                    'chronolog-milestones-sent': { date: todayStr, sent: [...milestonesSent.sent] }
+                });
                 chrome.notifications.create(`goal-${m}`, {
                     type: "basic",
                     iconUrl: "favicon.ico",
